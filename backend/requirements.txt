@@ -1,6 +1,11 @@
-# Requirements for GastAPI project
-SQLAlchemy[asyncio]==2.0.30
-uvicorn==0.29.0
-pydantic==2.7.1
-asuncpg==4.0.0
-fastapi==0.103.1
+# Requirements for BidBuilder FastAPI backend
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+passlib[bcrypt]
+python-jose
+pyotp
+python-multipart
+# If using PostgreSQL, uncomment the next line
+# asyncpg
