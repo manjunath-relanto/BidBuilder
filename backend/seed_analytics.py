@@ -1,6 +1,10 @@
 # seed_analytics.py: One-time script to seed analytics data into the database
 import os
 import json
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent))
+
 from db import SessionLocal
 from models import Analytics
 from db import Base

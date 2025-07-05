@@ -1,0 +1,499 @@
+{
+  "api_testing_guide": {
+    "description": "Mock JSON inputs for testing BidBuilder API routes with secure login verification",
+    "base_url": "http://localhost:8000",
+    "authentication_flow": "JWT + MFA (Multi-Factor Authentication)",
+    "security_features": [
+      "Password hashing with bcrypt",
+      "JWT token authentication",
+      "TOTP-based MFA",
+      "Role-based access control",
+      "Token expiration (60 minutes default, 12 hours after MFA)"
+    ]
+  },
+  
+  "authentication_routes": {
+    "user_registration": {
+      "endpoint": "POST /register",
+      "description": "Register a new user with secure password hashing",
+      "mock_input": {
+        "username": "john_doe",
+        "email": "john.doe@example.com",
+        "password": "SecurePassword123!"
+      },
+      "security_notes": [
+        "Password is hashed using bcrypt before storage",
+        "Username and email uniqueness enforced",
+        "Default 'user' role assigned",
+        "No authentication required (public endpoint)"
+      ],
+      "expected_response": {
+        "id": 1,
+        "username": "john_doe",
+        "email": "john.doe@example.com",
+        "role": "user"
+      }
+    },
+
+    "user_login": {
+      "endpoint": "POST /token",
+      "description": "Login with username/password, returns JWT token and MFA secret",
+      "mock_input": {
+        "username": "john_doe",
+        "password": "SecurePassword123!"
+      },
+      "security_notes": [
+        "Uses OAuth2PasswordRequestForm for secure credential handling",
+        "Password verification against bcrypt hash",
+        "Generates TOTP secret if not already set",
+        "Returns temporary JWT token (requires MFA verification)"
+      ],
+      "expected_response": {
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "token_type": "bearer",
+        "mfa_secret": "JBSWY3DPEHPK3PXP"
+      }
+    },
+
+    "mfa_verification": {
+      "endpoint": "POST /verify_mfa",
+      "description": "Verify MFA code and get final access token",
+      "mock_input": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "mfa_code": "123456"
+      },
+      "security_notes": [
+        "Validates temporary JWT token",
+        "Verifies TOTP code against stored secret",
+        "Returns final access token with 12-hour expiration",
+        "MFA code must be generated from authenticator app"
+      ],
+      "expected_response": {
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "token_type": "bearer"
+      }
+    }
+  },
+
+  "proposal_management_routes": {
+    "create_proposal": {
+      "endpoint": "POST /proposals",
+      "description": "Create a new proposal (requires authentication)",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {
+        "title": "Enterprise Software Development Proposal",
+        "description": "Comprehensive proposal for developing custom enterprise software solution"
+      },
+      "security_notes": [
+        "Requires valid JWT token in Authorization header",
+        "User ID automatically extracted from token",
+        "Proposal ownership enforced",
+        "Role-based access control applies"
+      ],
+      "expected_response": {
+        "id": 1,
+        "title": "Enterprise Software Development Proposal",
+        "description": "Comprehensive proposal for developing custom enterprise software solution",
+        "owner_id": 1
+      }
+    },
+
+    "list_proposals": {
+      "endpoint": "GET /proposals",
+      "description": "List all proposals owned by authenticated user",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {},
+      "security_notes": [
+        "Requires valid JWT token",
+        "Only returns proposals owned by authenticated user",
+        "Data isolation enforced at database level"
+      ],
+      "expected_response": [
+        {
+          "id": 1,
+          "title": "Enterprise Software Development Proposal",
+          "description": "Comprehensive proposal for developing custom enterprise software solution",
+          "owner_id": 1
+        }
+      ]
+    },
+
+    "get_proposal": {
+      "endpoint": "GET /proposals/{proposal_id}",
+      "description": "Get specific proposal by ID (owner only)",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {},
+      "url_params": {
+        "proposal_id": 1
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "Only proposal owner can access",
+        "404 error if proposal doesn't exist or user doesn't own it"
+      ],
+      "expected_response": {
+        "id": 1,
+        "title": "Enterprise Software Development Proposal",
+        "description": "Comprehensive proposal for developing custom enterprise software solution",
+        "owner_id": 1
+      }
+    },
+
+    "delete_proposal": {
+      "endpoint": "DELETE /proposals/{proposal_id}",
+      "description": "Delete proposal (owner only)",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {},
+      "url_params": {
+        "proposal_id": 1
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "Only proposal owner can delete",
+        "Cascading delete of related sections and comments"
+      ],
+      "expected_response": {
+        "message": "Proposal deleted successfully"
+      }
+    }
+  },
+
+  "template_management_routes": {
+    "create_template": {
+      "endpoint": "POST /templates",
+      "description": "Create proposal template (admin/manager only)",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {
+        "name": "Standard Software Proposal Template",
+        "content": "This is a comprehensive template for software development proposals..."
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "Role-based access: admin or manager only",
+        "Template name must be unique"
+      ],
+      "expected_response": {
+        "id": 1,
+        "name": "Standard Software Proposal Template",
+        "content": "This is a comprehensive template for software development proposals..."
+      }
+    },
+
+    "list_templates": {
+      "endpoint": "GET /templates",
+      "description": "List all available templates",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {},
+      "security_notes": [
+        "Requires valid JWT token",
+        "Available to all authenticated users"
+      ],
+      "expected_response": [
+        {
+          "id": 1,
+          "name": "Standard Software Proposal Template",
+          "content": "This is a comprehensive template for software development proposals..."
+        }
+      ]
+    },
+
+    "create_proposal_from_template": {
+      "endpoint": "POST /proposals/from_template",
+      "description": "Create new proposal from existing template",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {
+        "template_id": 1,
+        "title": "Custom Software Development Project"
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "Template must exist",
+        "User becomes owner of new proposal"
+      ],
+      "expected_response": {
+        "id": 2,
+        "title": "Custom Software Development Project",
+        "description": "Generated from template content...",
+        "owner_id": 1
+      }
+    }
+  },
+
+  "section_management_routes": {
+    "assign_section": {
+      "endpoint": "POST /sections/assign",
+      "description": "Assign proposal section to specific user",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {
+        "section_id": 1,
+        "user_id": 2
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "Only proposal owner or admin can assign sections",
+        "Triggers notification to assigned user",
+        "Sensitive sections have additional access controls"
+      ],
+      "expected_response": {
+        "message": "Section assigned successfully"
+      }
+    },
+
+    "comment_section": {
+      "endpoint": "POST /sections/comment",
+      "description": "Add comment to proposal section",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {
+        "section_id": 1,
+        "content": "This section needs more technical details"
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "User must have access to the section",
+        "Sensitive sections may have restricted commenting"
+      ],
+      "expected_response": {
+        "id": 1,
+        "proposal_id": 1,
+        "user_id": 1,
+        "content": "This section needs more technical details",
+        "created_at": "2024-01-15T10:30:00Z"
+      }
+    },
+
+    "get_section": {
+      "endpoint": "GET /sections/{section_id}",
+      "description": "Get specific proposal section",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {},
+      "url_params": {
+        "section_id": 1
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "User must have access to the section",
+        "Sensitive sections require special permissions"
+      ],
+      "expected_response": {
+        "id": 1,
+        "title": "Technical Requirements",
+        "content": "Detailed technical specifications...",
+        "assigned_user_id": 2,
+        "is_sensitive": false
+      }
+    }
+  },
+
+  "proposal_status_routes": {
+    "update_proposal_status": {
+      "endpoint": "POST /proposals/status",
+      "description": "Update proposal status (owner or admin only)",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {
+        "proposal_id": 1,
+        "status": "Review"
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "Only proposal owner or admin can update status",
+        "Status transitions may be restricted based on role"
+      ],
+      "expected_response": {
+        "message": "Proposal status updated successfully"
+      }
+    }
+  },
+
+  "search_and_analytics_routes": {
+    "search_proposals": {
+      "endpoint": "GET /search",
+      "description": "Search proposals by query string",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {},
+      "query_params": {
+        "q": "software development"
+      },
+      "security_notes": [
+        "Requires valid JWT token",
+        "Only returns proposals user has access to",
+        "Search results filtered by user permissions"
+      ],
+      "expected_response": [
+        {
+          "id": 1,
+          "title": "Enterprise Software Development Proposal",
+          "description": "Comprehensive proposal for developing custom enterprise software solution",
+          "owner_id": 1
+        }
+      ]
+    },
+
+    "get_analytics": {
+      "endpoint": "GET /analytics",
+      "description": "Get system analytics data",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {},
+      "security_notes": [
+        "Requires valid JWT token",
+        "May require admin role for full access",
+        "Data aggregated from user-accessible proposals only"
+      ],
+      "expected_response": {
+        "proposalsByStatus": [
+          {"status": "Draft", "count": 5},
+          {"status": "Review", "count": 3},
+          {"status": "Approved", "count": 2}
+        ],
+        "proposalsByMonth": [
+          {"month": "2024-01", "count": 8},
+          {"month": "2024-02", "count": 2}
+        ]
+      }
+    }
+  },
+
+  "notification_routes": {
+    "list_notifications": {
+      "endpoint": "GET /notifications",
+      "description": "Get user's notifications",
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      "mock_input": {},
+      "security_notes": [
+        "Requires valid JWT token",
+        "Only returns notifications for authenticated user",
+        "Notifications generated automatically for section assignments"
+      ],
+      "expected_response": [
+        {
+          "id": 1,
+          "message": "You have been assigned to section 'Technical Requirements'",
+          "created_at": "2024-01-15T10:30:00Z",
+          "is_read": false
+        }
+      ]
+    }
+  },
+
+  "system_routes": {
+    "health_check": {
+      "endpoint": "GET /health",
+      "description": "System health check",
+      "mock_input": {},
+      "security_notes": [
+        "Public endpoint - no authentication required",
+        "Used for load balancer health checks"
+      ],
+      "expected_response": {
+        "status": "healthy",
+        "timestamp": "2024-01-15T10:30:00Z"
+      }
+    }
+  },
+
+  "security_testing_scenarios": {
+    "invalid_token_tests": {
+      "missing_token": {
+        "headers": {},
+        "expected_error": "401 Unauthorized - Not authenticated"
+      },
+      "expired_token": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.expired.token"
+        },
+        "expected_error": "401 Unauthorized - Invalid token"
+      },
+      "malformed_token": {
+        "headers": {
+          "Authorization": "Bearer invalid_token_format"
+        },
+        "expected_error": "401 Unauthorized - Invalid token"
+      }
+    },
+
+    "unauthorized_access_tests": {
+      "access_other_user_proposal": {
+        "endpoint": "GET /proposals/999",
+        "headers": {
+          "Authorization": "Bearer valid_token_for_user_1"
+        },
+        "expected_error": "404 Not Found - Proposal not found"
+      },
+      "admin_only_endpoint": {
+        "endpoint": "POST /templates",
+        "headers": {
+          "Authorization": "Bearer valid_token_for_regular_user"
+        },
+        "expected_error": "403 Forbidden - Insufficient permissions"
+      }
+    },
+
+    "mfa_security_tests": {
+      "invalid_mfa_code": {
+        "endpoint": "POST /verify_mfa",
+        "mock_input": {
+          "token": "valid_temp_token",
+          "mfa_code": "000000"
+        },
+        "expected_error": "401 Unauthorized - Invalid MFA code"
+      },
+      "expired_temp_token": {
+        "endpoint": "POST /verify_mfa",
+        "mock_input": {
+          "token": "expired_temp_token",
+          "mfa_code": "123456"
+        },
+        "expected_error": "401 Unauthorized - Invalid token"
+      }
+    }
+  },
+
+  "testing_workflow": {
+    "complete_authentication_flow": [
+      "1. Register new user with POST /register",
+      "2. Login with POST /token to get temporary token and MFA secret",
+      "3. Generate MFA code using authenticator app with provided secret",
+      "4. Verify MFA with POST /verify_mfa to get final access token",
+      "5. Use final access token in Authorization header for all subsequent requests"
+    ],
+    "proposal_workflow": [
+      "1. Create proposal with POST /proposals",
+      "2. List proposals with GET /proposals",
+      "3. Get specific proposal with GET /proposals/{id}",
+      "4. Update status with POST /proposals/status",
+      "5. Delete proposal with DELETE /proposals/{id}"
+    ],
+    "template_workflow": [
+      "1. Create template with POST /templates (admin/manager only)",
+      "2. List templates with GET /templates",
+      "3. Create proposal from template with POST /proposals/from_template"
+    ]
+  }
+} 
