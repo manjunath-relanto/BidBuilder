@@ -3,9 +3,13 @@ fastapi
 uvicorn
 sqlalchemy
 pydantic
+pydantic-settings
 passlib[bcrypt]
 python-jose
 pyotp
 python-multipart
 # If using PostgreSQL, uncomment the next line
 # asyncpg
+
+requests
+langchain
