@@ -8,11 +8,11 @@ from typing import List, Optional
 
 sys.path.append(str(Path(__file__).parent.resolve()))
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import event
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import event, func
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import uvicorn
@@ -30,6 +30,8 @@ from models import (
     Notification,
 )
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
+
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -37,16 +39,6 @@ from fastapi.middleware.cors import CORSMiddleware
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Frontend URLs
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 app.add_middleware(
@@ -56,6 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Default Templates
 DEFAULT_TEMPLATES = [
     {
         "name": "Enterprise Software Implementation",
@@ -67,7 +62,6 @@ DEFAULT_TEMPLATES = [
         "usage_count": 24,
         "content": None,
     },
-
 ]
 
 def seed_templates(db: Session) -> None:
@@ -136,14 +130,7 @@ def update_analytics(db: Session) -> None:
         db.query(Analytics).filter(Analytics.key == key).update({"data": data})
     db.commit()
 
-@event.listens_for(Proposal, "after_insert")
-@event.listens_for(Proposal, "after_update")
-def proposal_events(_mapper, _conn, _target):
-    db = SessionLocal()
-    update_analytics(db)
-    db.close()
-
-#  Pydantic Schemas 
+# Pydantic Schemas
 class UserCreate(BaseModel):
     username: str
     email: str
@@ -237,7 +224,7 @@ class NotificationOut(BaseModel):
     is_read: bool
     model_config = {"from_attributes": True}
 
-#  Auth Endpoints 
+# Auth Endpoints
 @app.post("/register", response_model=UserOut)
 def register(user: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter((User.username == user.username) | (User.email == user.email)).first():
@@ -271,11 +258,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     token = create_access_token(data={"sub": user.id})
     return Token(access_token=token, token_type="bearer")
 
-@app.get("/me", response_model=UserOut)
-def get_current_user_info(user: User = Depends(get_current_user)):
-    return user
-
-#  Proposal Endpoints 
+# Proposal Endpoints
 @app.post("/proposals", response_model=ProposalOut)
 def create_proposal(
     proposal: ProposalCreate,
@@ -294,9 +277,9 @@ def create_proposal(
     db.add(db_proposal)
     db.commit()
     db.refresh(db_proposal)
+    update_analytics(db)  # Update analytics after commit
     return db_proposal
 
-# ... the rest of your routes remain unchanged ...
 @app.post("/proposals/from_template", response_model=ProposalOut)
 def create_proposal_from_template(
     template_id: int,
@@ -324,7 +307,6 @@ def create_proposal_from_template(
     return db_proposal
 
 
-
 @app.post("/templates", response_model=ProposalTemplateOut)
 def create_template(
     template: ProposalTemplateCreate,
@@ -334,7 +316,6 @@ def create_template(
     if user.role.name not in {"admin", "manager"}:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    #  new existence check
     if db.query(Template).filter(Template.name == template.name).first():
         raise HTTPException(
             status_code=400, detail=f"A template named '{template.name}' already exists."
@@ -367,7 +348,7 @@ def create_template(
 def list_templates(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return db.query(Template).all()
 
-
+# Analytics
 @app.get("/analytics")
 def get_analytics(db: Session = Depends(get_db)):
     rows = db.query(Analytics).all()
@@ -377,7 +358,7 @@ def get_analytics(db: Session = Depends(get_db)):
     }
 
 
-#  Assign Section to User 
+# Assign Section to User
 @app.post("/sections/assign")
 def assign_section(req: ProposalSectionAssignRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     section = db.query(ProposalSection).filter(ProposalSection.id == req.section_id).first()
@@ -402,7 +383,7 @@ def notify_section_assignment(mapper, connection, target):
         )
         connection.execute(ins)
 
-#  Add Comment to Section 
+# Add Comment to Section
 @app.post("/sections/comment", response_model=CommentOut)
 def comment_section(req: ProposalSectionCommentRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     section = db.query(ProposalSection).filter(ProposalSection.id == req.section_id).first()
@@ -414,7 +395,7 @@ def comment_section(req: ProposalSectionCommentRequest, db: Session = Depends(ge
     db.refresh(comment)
     return comment
 
-#  Search Proposals/Sections 
+# Search Proposals/Sections
 @app.get("/search")
 def search_proposals(q: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     proposals = db.query(Proposal).filter(Proposal.owner_id == user.id, Proposal.description.ilike(f"%{q}%")).all()
@@ -424,7 +405,7 @@ def search_proposals(q: str, db: Session = Depends(get_db), user: User = Depends
         "sections": [{"id": s.id, "title": s.title, "content": s.content, "proposal_id": s.proposal_id} for s in sections]
     }
 
-#  Update Proposal Status (Workflow) 
+# Update Proposal Status (Workflow)
 @app.post("/proposals/status")
 def update_proposal_status(req: ProposalStatusUpdateRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     proposal = db.query(Proposal).filter(Proposal.id == req.proposal_id).first()
@@ -437,12 +418,12 @@ def update_proposal_status(req: ProposalStatusUpdateRequest, db: Session = Depen
     db.commit()
     return {"ok": True, "status": proposal.status}
 
-#  List Notifications 
+# List Notifications
 @app.get("/notifications", response_model=List[NotificationOut])
 def list_notifications(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return db.query(Notification).filter(Notification.user_id == user.id).order_by(Notification.created_at.desc()).all()
 
-#  Section-level Access Control Example (middleware for sensitive sections) 
+# Section-level Access Control Example (middleware for sensitive sections)
 @app.get("/sections/{section_id}", response_model=ProposalSectionOut)
 def get_section(section_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     section = db.query(ProposalSection).filter(ProposalSection.id == section_id).first()
@@ -452,7 +433,7 @@ def get_section(section_id: int, db: Session = Depends(get_db), user: User = Dep
         raise HTTPException(status_code=403, detail="Not authorized to view sensitive section")
     return section
 
-#  Generate Proposal Summary (new endpoint) 
+# Generate Proposal Summary (new endpoint)
 @app.post("/get_summary")
 def get_summary(
     proposal: ProposalCreate,
@@ -477,11 +458,18 @@ def delete_proposal(
         raise HTTPException(status_code=403, detail="Not authorized to delete this proposal")
     db.delete(proposal)
     db.commit()
+    update_analytics(db)  # Update analytics after commit
     return {"ok": True, "message": "Proposal deleted"}
 
 # Rebuild forward refs
 for m in (ProposalCreate, ProposalOut, ProposalTemplateCreate, ProposalTemplateOut):
     m.model_rebuild()
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.close()
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
