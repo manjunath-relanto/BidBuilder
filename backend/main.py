@@ -30,6 +30,9 @@ from models import (
     Notification,
 )
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -46,6 +49,13 @@ app.add_middleware(
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 DEFAULT_TEMPLATES = [
     {
         "name": "Enterprise Software Implementation",
