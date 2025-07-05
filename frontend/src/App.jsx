@@ -1,8 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { useSelector } from "react-redux"
+import { useState, useEffect } from "react"
+import { useSelector, useDispatch } from "react-redux"
+import { setUser, logout } from "./lib/features/authSlice"
+import { authAPI } from "./lib/api"
 import LoginForm from "./components/LoginForm"
+import SignupForm from "./components/SignupForm"
 import ProposalList from "./components/ProposalList"
 import ProposalForm from "./components/ProposalForm"
 import ProposalDetails from "./components/ProposalDetails"
@@ -12,12 +15,57 @@ import TeamPage from "./components/TeamPage"
 import EnhancedHeader from "./components/EnhancedHeader"
 
 function App() {
+  const dispatch = useDispatch()
   const { isAuthenticated } = useSelector((state) => state.auth)
   const [currentView, setCurrentView] = useState("dashboard")
   const [selectedProposal, setSelectedProposal] = useState(null)
+  const [authMode, setAuthMode] = useState("login") // "login" or "signup"
+
+  // Check for existing token on app load
+  useEffect(() => {
+    const token = localStorage.getItem("access_token")
+    if (token) {
+      // Validate token and get user info from backend
+      authAPI.getCurrentUser()
+        .then(user => {
+          const userData = {
+            id: user.id,
+            name: user.username,
+            email: user.email,
+            role: user.role,
+            avatar: "/placeholder.svg?height=40&width=40",
+          }
+          dispatch(setUser(userData))
+        })
+        .catch(error => {
+          console.error('Failed to get user info:', error)
+          // Token might be invalid, remove it
+          localStorage.removeItem("access_token")
+        })
+    }
+  }, [dispatch])
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token")
+    dispatch(logout())
+    setCurrentView("dashboard")
+    setSelectedProposal(null)
+  }
+
+  const handleSwitchToSignup = () => {
+    setAuthMode("signup")
+  }
+
+  const handleSwitchToLogin = () => {
+    setAuthMode("login")
+  }
 
   if (!isAuthenticated) {
-    return <LoginForm />
+    return authMode === "login" ? (
+      <LoginForm onSwitchToSignup={handleSwitchToSignup} />
+    ) : (
+      <SignupForm onSwitchToLogin={handleSwitchToLogin} />
+    )
   }
 
   const handleCreateProposal = () => {
@@ -76,7 +124,12 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <EnhancedHeader currentView={currentView} onNavigate={handleNavigate} onCreateProposal={handleCreateProposal} />
+      <EnhancedHeader 
+        currentView={currentView} 
+        onNavigate={handleNavigate} 
+        onCreateProposal={handleCreateProposal}
+        onLogout={handleLogout}
+      />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{renderCurrentView()}</main>
     </div>
   )

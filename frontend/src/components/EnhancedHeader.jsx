@@ -32,7 +32,7 @@ import {
 } from "lucide-react"
 import NotificationCenter from "./NotificationCenter"
 
-export default function EnhancedHeader({ currentView, onNavigate, onCreateProposal }) {
+export default function EnhancedHeader({ currentView, onNavigate, onCreateProposal, onLogout }) {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth)
   const { unreadCount } = useSelector((state) => state.notifications)
@@ -55,7 +55,11 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
   }, [])
 
   const handleLogout = () => {
-    dispatch(logout())
+    if (onLogout) {
+      onLogout()
+    } else {
+      dispatch(logout())
+    }
   }
 
   const navigationItems = [

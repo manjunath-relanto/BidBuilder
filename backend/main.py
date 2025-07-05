@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import event, func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -33,6 +34,16 @@ from auth import get_password_hash, verify_password, create_access_token, get_cu
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 DEFAULT_TEMPLATES = [
@@ -249,6 +260,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     token = create_access_token(data={"sub": user.id})
     return Token(access_token=token, token_type="bearer")
+
+@app.get("/me", response_model=UserOut)
+def get_current_user_info(user: User = Depends(get_current_user)):
+    return user
 
 #  Proposal Endpoints 
 @app.post("/proposals", response_model=ProposalOut)
