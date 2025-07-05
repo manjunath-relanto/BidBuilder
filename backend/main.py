@@ -147,6 +147,8 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    username: str
+    email: str
 
 class ProposalCreate(BaseModel):
     title: str
@@ -256,7 +258,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     token = create_access_token(data={"sub": user.id})
-    return Token(access_token=token, token_type="bearer")
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "username": user.username,
+        "email": user.email,
+    }
 
 # Proposal Endpoints
 @app.post("/proposals", response_model=ProposalOut)
