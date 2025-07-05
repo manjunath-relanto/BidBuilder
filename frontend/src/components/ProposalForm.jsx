@@ -12,19 +12,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Badge } from "./ui/badge"
 import { X, Plus } from "lucide-react"
 
-export default function ProposalForm({ proposal = null, onClose }) {
+export default function ProposalForm({ proposal = null, template = null, onClose }) {
   const dispatch = useDispatch()
   const isEditing = !!proposal
 
   const [formData, setFormData] = useState({
-    title: proposal?.title || "",
+    title: proposal?.title || template?.name || "",
     client: proposal?.client || "",
-    description: proposal?.description || "",
-    value: proposal?.value || "",
+    description: proposal?.description || template?.description || "",
+    value: proposal?.value || template?.estimatedValue || "",
     priority: proposal?.priority || "medium",
     status: proposal?.status || "draft",
-    timeline: proposal?.timeline || "",
-    requirements: proposal?.requirements || [],
+    timeline: proposal?.timeline || template?.timeline || "",
+    requirements: proposal?.requirements || template?.sections || [],
   })
 
   const [newRequirement, setNewRequirement] = useState("")
@@ -69,6 +69,13 @@ export default function ProposalForm({ proposal = null, onClose }) {
         <CardDescription>
           {isEditing ? "Update proposal details" : "Fill in the details to create a new proposal"}
         </CardDescription>
+        {template && (
+          <div className="mt-2">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              Using template: {template.name}
+            </Badge>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">

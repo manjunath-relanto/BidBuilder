@@ -89,11 +89,55 @@ def init_analytics(db: Session) -> None:
             db.add(Analytics(key=key, data={}))
     db.commit()
 
+def seed_notifications(db: Session) -> None:
+    # Get the first user to create notifications for
+    user = db.query(User).first()
+    if not user:
+        return
+    
+    # Check if notifications already exist
+    if db.query(Notification).count() > 0:
+        return
+    
+    sample_notifications = [
+        {
+            "user_id": user.id,
+            "message": "Your Enterprise CRM proposal has been approved by the review committee",
+            "created_at": datetime.utcnow() - timedelta(hours=2),
+            "is_read": False
+        },
+        {
+            "user_id": user.id,
+            "message": "Manjunatha A commented on your Cloud Migration proposal",
+            "created_at": datetime.utcnow() - timedelta(hours=4),
+            "is_read": False
+        },
+        {
+            "user_id": user.id,
+            "message": "AI Analytics proposal review deadline is in 2 days",
+            "created_at": datetime.utcnow() - timedelta(hours=6),
+            "is_read": True
+        },
+        {
+            "user_id": user.id,
+            "message": "New template 'Digital Transformation' has been added to your workspace",
+            "created_at": datetime.utcnow() - timedelta(hours=8),
+            "is_read": False
+        }
+    ]
+    
+    for notification_data in sample_notifications:
+        notification = Notification(**notification_data)
+        db.add(notification)
+    
+    db.commit()
+
 @app.on_event("startup")
 def on_startup() -> None:
     db = SessionLocal()
     seed_templates(db)
     init_analytics(db)
+    seed_notifications(db)
     update_analytics(db)
     db.close()
 

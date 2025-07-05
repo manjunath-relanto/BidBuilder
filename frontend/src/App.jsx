@@ -18,6 +18,7 @@ function App() {
   const { isAuthenticated } = useSelector((state) => state.auth)
   const [currentView, setCurrentView] = useState("dashboard")
   const [selectedProposal, setSelectedProposal] = useState(null)
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [authMode, setAuthMode] = useState("login") // "login" or "signup"
 
   // Check for existing token on app load
@@ -62,6 +63,7 @@ function App() {
 
   const handleCreateProposal = () => {
     setSelectedProposal(null)
+    setSelectedTemplate(null)
     setCurrentView("create")
   }
 
@@ -78,6 +80,7 @@ function App() {
   const handleBackToList = () => {
     setCurrentView("list")
     setSelectedProposal(null)
+    setSelectedTemplate(null)
   }
 
   const handleNavigate = (view) => {
@@ -86,13 +89,8 @@ function App() {
   }
 
   const handleUseTemplate = (template) => {
-    setSelectedProposal({
-      title: template.name,
-      description: template.description,
-      requirements: template.sections,
-      value: template.estimatedValue,
-      timeline: template.timeline,
-    })
+    setSelectedTemplate(template)
+    setSelectedProposal(null)
     setCurrentView("create")
   }
 
@@ -106,7 +104,11 @@ function App() {
         return <TeamPage />
       case "create":
       case "edit":
-        return <ProposalForm proposal={currentView === "edit" ? selectedProposal : null} onClose={handleBackToList} />
+        return <ProposalForm 
+          proposal={currentView === "edit" ? selectedProposal : null} 
+          template={currentView === "create" ? selectedTemplate : null}
+          onClose={handleBackToList} 
+        />
       case "details":
         return <ProposalDetails proposal={selectedProposal} onEdit={handleEditProposal} onBack={handleBackToList} />
       default:

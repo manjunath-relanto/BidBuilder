@@ -1,7 +1,8 @@
 "use client"
 
+import { useEffect } from "react"
 import { useSelector, useDispatch } from "react-redux"
-import { markAsRead, markAllAsRead } from "../lib/features/notificationsSlice"
+import { fetchNotifications, markNotificationAsRead, markAllAsRead } from "../lib/features/notificationsSlice"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
@@ -11,10 +12,15 @@ import { Bell, Check, CheckCheck, AlertCircle, MessageCircle, Clock } from "luci
 
 export default function NotificationCenter() {
   const dispatch = useDispatch()
-  const { items: notifications, unreadCount } = useSelector((state) => state.notifications)
+  const { items: notifications, unreadCount, loading } = useSelector((state) => state.notifications)
+
+  // Fetch notifications when component mounts
+  useEffect(() => {
+    dispatch(fetchNotifications())
+  }, [dispatch])
 
   const handleMarkAsRead = (id) => {
-    dispatch(markAsRead(id))
+    dispatch(markNotificationAsRead(id))
   }
 
   const handleMarkAllAsRead = () => {
@@ -89,7 +95,12 @@ export default function NotificationCenter() {
       <Separator />
       <CardContent className="p-0">
         <ScrollArea className="h-96">
-          {notifications.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+              <p className="text-sm text-muted-foreground">Loading notifications...</p>
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="p-3 bg-gray-100 rounded-full mb-3">
                 <Bell className="h-6 w-6 text-gray-400" />

@@ -18,7 +18,7 @@ const createAuthHeaders = (additionalHeaders = {}) => {
 }
 
 // Generic API request function
-const apiRequest = async (endpoint, options = {}) => {
+export const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`
   const headers = createAuthHeaders(options.headers)
   
@@ -135,6 +135,21 @@ export const analyticsAPI = {
   }
 }
 
+// Notifications API functions
+export const notificationsAPI = {
+  // Get all notifications
+  getAll: async () => {
+    return apiRequest('/notifications')
+  },
+
+  // Mark notification as read (you might want to add this endpoint)
+  markAsRead: async (notificationId) => {
+    return apiRequest(`/notifications/${notificationId}/read`, {
+      method: 'PUT'
+    })
+  }
+}
+
 // Utility function to check if user is authenticated
 export const isAuthenticated = () => {
   return !!getAuthToken()
@@ -150,6 +165,7 @@ export default {
   proposalsAPI,
   templatesAPI,
   analyticsAPI,
+  notificationsAPI,
   isAuthenticated,
   logout
 } 
