@@ -1,16 +1,16 @@
 from langchain.llms import Ollama
 from langchain import LLMChain, PromptTemplate
 
-# 1) Configure the Ollama LLM to point at your local API
+# 1) Point at your local Ollama and choose llama3.2:latest
 llm = Ollama(
-    model="llama3:latest",
-    base_url="http://localhost:11434",  # Ollama’s default HTTP endpoint
+    model="llama3.2:latest",
+    base_url="http://localhost:11434",  # Ollama’s HTTP host
     temperature=0.7,
 )
 
-# 2) Create a prompt template that takes a title and description
+# 2) Define the prompt template
 template = """
-Summarize the following proposal titled "{title}" in one concise sentence:
+Summarize the following proposal titled "{title}" for creting bidding documents:
 
 {description}
 
@@ -18,12 +18,12 @@ Summary:
 """
 prompt = PromptTemplate.from_template(template)
 
-# 3) Combine into an LLMChain
+# 3) Build the chain
 chain = LLMChain(llm=llm, prompt=prompt)
 
 def generate_summary(title: str, description: str) -> str:
     """
-    Use LangChain + Ollama to generate a one-sentence summary.
+    Generate a one-sentence summary using LangChain + local Ollama.
     """
     return chain.run({"title": title, "description": description}).strip()
 
