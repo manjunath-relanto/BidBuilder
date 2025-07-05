@@ -37,13 +37,12 @@ export default function LoginForm({ onSwitchToSignup }) {
       // Store token in localStorage
       localStorage.setItem("access_token", data.access_token)
 
-      // Get user info from backend
-      const userData = await authAPI.getCurrentUser()
+      // Create user object from login data
       const user = {
-        id: userData.id,
-        name: userData.username,
-        email: userData.email,
-        role: userData.role,
+        id: "1", // We'll get this from the token payload if needed
+        name: formData.username,
+        email: `${formData.username}@example.com`,
+        role: "user",
         avatar: "/placeholder.svg?height=40&width=40",
       }
       dispatch(setUser(user))

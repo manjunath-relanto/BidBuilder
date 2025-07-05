@@ -61,7 +61,7 @@ export default function SignupForm({ onSwitchToLogin }) {
       // Store token in localStorage
       localStorage.setItem("access_token", loginData.access_token)
 
-      // Set user in Redux store
+      // Set user in Redux store using registration data
       const user = {
         id: data.id,
         name: data.username,

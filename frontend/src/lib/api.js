@@ -72,11 +72,6 @@ export const authAPI = {
       method: 'POST',
       body: JSON.stringify(userData)
     })
-  },
-
-  // Get current user info (you might want to create this endpoint)
-  getCurrentUser: async () => {
-    return apiRequest('/me')
   }
 }
 

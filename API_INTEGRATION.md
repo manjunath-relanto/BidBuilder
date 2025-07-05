@@ -46,23 +46,7 @@ username=string&password=string
 }
 ```
 
-#### GET `/me`
-Get current user information (requires authentication).
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "username": "string",
-  "email": "string",
-  "role": "string"
-}
-```
 
 ## Frontend Integration
 
@@ -72,15 +56,16 @@ Authorization: Bearer <access_token>
    - User enters username and password
    - Frontend calls `/login` endpoint
    - Access token is stored in localStorage
-   - User info is fetched from `/me` endpoint
-   - User is redirected to dashboard
+   - User is immediately redirected to dashboard
+   - User info is created from login form data
 
 2. **Signup Process:**
    - User fills registration form
    - Frontend calls `/register` endpoint
    - User is automatically logged in
    - Access token is stored in localStorage
-   - User is redirected to dashboard
+   - User is immediately redirected to dashboard
+   - User info is created from registration data
 
 3. **Token Management:**
    - Access tokens are stored in localStorage
@@ -91,7 +76,7 @@ Authorization: Bearer <access_token>
 
 The frontend uses a centralized API utility (`src/lib/api.js`) that provides:
 
-- **Authentication helpers:** `authAPI.login()`, `authAPI.register()`, `authAPI.getCurrentUser()`
+- **Authentication helpers:** `authAPI.login()`, `authAPI.register()`
 - **Automatic token management:** Tokens are automatically included in request headers
 - **Error handling:** Consistent error handling across all API calls
 - **CORS support:** Backend configured to allow frontend requests
