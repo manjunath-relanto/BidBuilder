@@ -16,7 +16,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, field_serializer
 import uvicorn
-from fastapi import UploadFile, File, Form
+from fastapi import UploadFile, File, Form, Body
 
 from db import Base, engine, get_db, SessionLocal
 from summary_generator import generate_summary
@@ -242,6 +242,12 @@ class ProposalAssignmentRequest(BaseModel):
     proposal_id: int
     user_id: int
 
+class SubmitBackToManager(BaseModel):
+    proposal_id: int
+
+class ApproveProposal(BaseModel):
+    proposal_id: int
+
 # Auth Endpoints
 @app.post("/register", response_model=UserOut)
 def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -340,6 +346,40 @@ def create_proposal_from_template(
     db.refresh(db_proposal)
     return db_proposal
 
+@app.put("/proposals/{proposal_id}", response_model=ProposalOut)
+def edit_proposal(
+    proposal_id: int,
+    proposal_data: ProposalCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    is_manager = user.role.name == "manager"
+    is_user = user.role.name == "user"
+    is_assigned_user = proposal.owner_id == user.id and "manager_id:" in (proposal.requirements or "")
+    is_pending_submission = proposal.status == "Pending Approval"
+
+    if not (is_manager or (is_user and is_assigned_user and not is_pending_submission)):
+        raise HTTPException(status_code=403, detail="Not authorized to edit this proposal")
+
+    # Allow edits
+    proposal.title = proposal_data.title
+    proposal.description = proposal_data.description
+    proposal.category = proposal_data.category
+    proposal.template_id = proposal_data.template_id
+    proposal.estimated_value = proposal_data.estimated_value
+    proposal.timeline = proposal_data.timeline
+    proposal.priority = proposal_data.priority
+    proposal.status = proposal_data.status
+    proposal.requirements = proposal_data.requirements
+    proposal.client_name = proposal_data.client_name
+
+    db.commit()
+    db.refresh(proposal)
+    return proposal
 
 
 @app.post("/templates", response_model=ProposalTemplateOut)
@@ -502,8 +542,21 @@ def list_proposal(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    proposals = db.query(Proposal).filter(Proposal.owner_id == user.id).all()
+    if user.role.name == "manager":
+        proposals = db.query(Proposal).filter(
+            (Proposal.owner_id == user.id) |
+            (Proposal.assigned_by_manager_id == user.id)
+        ).all()
+    elif user.role.name == "user":
+        proposals = db.query(Proposal).filter(
+            (Proposal.owner_id == user.id) &
+            (Proposal.status != "Pending Approval")
+        ).all()
+    else:
+        proposals = []
     return proposals
+
+
 
 # Get Proposal by ID
 @app.get("/get_proposal_by_id/{proposal_id}", response_model=ProposalOut)
@@ -596,17 +649,19 @@ def assign_proposal_to_user(
 
     # Track original manager id
     proposal.owner_id = req.user_id
-    proposal.requirements = f"Assigned by manager_id:{user.id}"  # can use separate field or metadata table
+    proposal.assigned_by_manager_id = user.id  # <-- Add this line
+    proposal.requirements = f"Assigned by manager_id:{user.id}"
     db.commit()
     return {"ok": True, "message": f"Proposal {proposal.id} assigned to {assignee.username}"}
 
 
 @app.post("/proposals/submit_back_to_manager")
 def submit_proposal_back_to_manager(
-    proposal_id: int,
+    req: SubmitBackToManager,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    proposal_id = req.proposal_id
     proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
@@ -614,21 +669,67 @@ def submit_proposal_back_to_manager(
     if proposal.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not the current owner of this proposal")
 
-    # Extract manager ID (stored earlier)
     if not proposal.requirements or "manager_id:" not in proposal.requirements:
         raise HTTPException(status_code=400, detail="Original manager not found for this proposal")
 
-    try:
-        manager_id = int(proposal.requirements.split("manager_id:")[1].split()[0])
-    except:
-        raise HTTPException(status_code=400, detail="Corrupted manager reference")
+    if proposal.status == "Pending Approval":
+        raise HTTPException(status_code=400, detail="Proposal already submitted")
 
-    manager = db.query(User).filter(User.id == manager_id).first()
-    if not manager or manager.role.name != "manager":
-        raise HTTPException(status_code=400, detail="Invalid manager")
-
-    # Reassign ownership
-    proposal.owner_id = manager_id
-    proposal.requirements = None  # or mark as submitted
+    proposal.status = "Pending Approval"
     db.commit()
-    return {"ok": True, "message": f"Proposal {proposal.id} submitted back to manager"}
+    return {"ok": True, "message": f"Proposal {proposal.id} submitted and pending approval"}
+
+
+
+@app.post("/proposals/approve")
+def approve_submitted_proposal(
+    req: ApproveProposal,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    proposal_id = req.proposal_id
+    if user.role.name != "manager":
+        raise HTTPException(status_code=403, detail="Only managers can approve proposals")
+
+    proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
+    if not proposal or proposal.status != "Pending Approval":
+        raise HTTPException(status_code=400, detail="Proposal not found or not pending approval")
+
+    if not proposal.requirements or f"manager_id:{user.id}" not in proposal.requirements:
+        raise HTTPException(status_code=403, detail="You are not the assigning manager")
+
+    proposal.owner_id = user.id
+    proposal.status = "Approved"
+    proposal.requirements = None
+    db.commit()
+    return {"ok": True, "message": f"Proposal {proposal.id} approved and reassigned to manager"}
+
+@app.get("/my_assigned_proposals", response_model=List[ProposalOut])
+def my_assigned_proposals(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if user.role.name != "user":
+        raise HTTPException(status_code=403, detail="Only users can access assigned proposals")
+
+    proposals = db.query(Proposal).filter(
+        Proposal.owner_id == user.id,
+        Proposal.status != "Pending Approval"
+    ).all()
+    return proposals
+
+
+
+@app.get("/manager/pending_approval", response_model=List[ProposalOut])
+def manager_pending_approval(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if user.role.name != "manager":
+        raise HTTPException(status_code=403, detail="Only managers can view pending approvals")
+
+    proposals = db.query(Proposal).filter(
+        Proposal.status == "Pending Approval",
+        Proposal.assigned_by_manager_id == user.id
+    ).all()
+    return proposals
