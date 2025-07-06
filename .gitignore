@@ -1,6 +1,7 @@
 .venv/
 # Ignore all .db files in the backend folder
 backend/*.db
+backend/*.db-*
 
 # Ignore Python cache files
 backend/__pycache__/
