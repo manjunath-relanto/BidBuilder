@@ -8,9 +8,13 @@ passlib[bcrypt]
 python-jose
 pyotp
 python-multipart
-langchain-community
 # If using PostgreSQL, uncomment the next line
 # asyncpg
 
 requests
 langchain
+langchain-community
+
+langchain-core 
+pdfplumber
+transformers
