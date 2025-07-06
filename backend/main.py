@@ -14,7 +14,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 import uvicorn
 from fastapi import UploadFile, File, Form
 
@@ -237,6 +237,10 @@ class NotificationOut(BaseModel):
     is_read: bool
     model_config = {"from_attributes": True}
 
+class ProposalAssignmentRequest(BaseModel):
+    proposal_id: int
+    user_id: int
+
 # Auth Endpoints
 @app.post("/register", response_model=UserOut)
 def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -276,13 +280,15 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "email": user.email,
     }
 
-# Proposal Endpoints
 @app.post("/proposals", response_model=ProposalOut)
 def create_proposal(
     proposal: ProposalCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    if user.role.name != "manager":
+        raise HTTPException(status_code=403, detail="Only managers can create proposals")
+
     db_proposal = Proposal(
         title=proposal.title,
         description=proposal.description,
@@ -291,16 +297,17 @@ def create_proposal(
         template_id=proposal.template_id,
         estimated_value=proposal.estimated_value,
         timeline=proposal.timeline,
-        priority=proposal.priority,             # New field
-        status=proposal.status,                 # New field
-        requirements=proposal.requirements,     # New field
-        client_name=proposal.client_name,       # New field
+        priority=proposal.priority,
+        status=proposal.status,
+        requirements=proposal.requirements,
+        client_name=proposal.client_name,
     )
     db.add(db_proposal)
     db.commit()
     db.refresh(db_proposal)
-    update_analytics(db)  # Update analytics after commit
+    update_analytics(db)
     return db_proposal
+
 
 @app.post("/proposals/from_template", response_model=ProposalOut)
 def create_proposal_from_template(
@@ -309,6 +316,9 @@ def create_proposal_from_template(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    if user.role.name != "manager":
+        raise HTTPException(status_code=403, detail="Only managers can create proposals from templates")
+
     template = db.query(Template).filter(Template.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
@@ -327,6 +337,7 @@ def create_proposal_from_template(
     db.commit()
     db.refresh(db_proposal)
     return db_proposal
+
 
 
 @app.post("/templates", response_model=ProposalTemplateOut)
@@ -538,6 +549,87 @@ async def read_data_from_pdf(
             os.remove(temp_path)
 
     return {"summary": summary}
+
+@app.get("/manager/users", response_model=List[UserOut])
+def get_users_under_manager(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    if user.role.name != "manager":
+        raise HTTPException(status_code=403, detail="Only managers can view user list")
+
+    users = db.query(User).join(Role).filter(Role.name == "user").all()
+
+    # Convert SQLAlchemy User objects to Pydantic safely
+    return [
+        UserOut(
+            id=u.id,
+            username=u.username,
+            email=u.email,
+            role=u.role.name if u.role else None
+        )
+        for u in users
+    ]
+
+
+@app.post("/proposals/assign_to_user")
+def assign_proposal_to_user(
+    req: ProposalAssignmentRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if user.role.name != "manager":
+        raise HTTPException(status_code=403, detail="Only managers can assign proposals")
+
+    proposal = db.query(Proposal).filter(Proposal.id == req.proposal_id).first()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    
+    if proposal.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Proposal not owned by manager")
+
+    assignee = db.query(User).filter(User.id == req.user_id).first()
+    if not assignee or assignee.role.name != "user":
+        raise HTTPException(status_code=400, detail="Invalid user assignment")
+
+    # Track original manager id
+    proposal.owner_id = req.user_id
+    proposal.requirements = f"Assigned by manager_id:{user.id}"  # can use separate field or metadata table
+    db.commit()
+    return {"ok": True, "message": f"Proposal {proposal.id} assigned to {assignee.username}"}
+
+
+@app.post("/proposals/submit_back_to_manager")
+def submit_proposal_back_to_manager(
+    proposal_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    if proposal.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="You are not the current owner of this proposal")
+
+    # Extract manager ID (stored earlier)
+    if not proposal.requirements or "manager_id:" not in proposal.requirements:
+        raise HTTPException(status_code=400, detail="Original manager not found for this proposal")
+
+    try:
+        manager_id = int(proposal.requirements.split("manager_id:")[1].split()[0])
+    except:
+        raise HTTPException(status_code=400, detail="Corrupted manager reference")
+
+    manager = db.query(User).filter(User.id == manager_id).first()
+    if not manager or manager.role.name != "manager":
+        raise HTTPException(status_code=400, detail="Invalid manager")
+
+    # Reassign ownership
+    proposal.owner_id = manager_id
+    proposal.requirements = None  # or mark as submitted
+    db.commit()
+    return {"ok": True, "message": f"Proposal {proposal.id} submitted back to manager"}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

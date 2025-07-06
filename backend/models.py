@@ -24,8 +24,12 @@ class User(Base):
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     role_id = Column(Integer, ForeignKey("roles.id"))
+
     role = relationship("Role", back_populates="users")
-    proposals = relationship("Proposal", back_populates="owner")
+
+    proposals = relationship("Proposal", back_populates="owner", foreign_keys="Proposal.owner_id")
+    assigned_proposals = relationship("Proposal", foreign_keys="Proposal.assigned_by_manager_id", back_populates="assigned_by_manager", overlaps="assigned_by_manager")
+
 
 class Proposal(Base):
     __tablename__ = "proposals"
@@ -38,7 +42,7 @@ class Proposal(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     owner_id = Column(Integer, ForeignKey("users.id"))
-    owner = relationship("User", back_populates="proposals")
+    owner = relationship("User", back_populates="proposals", foreign_keys=[owner_id])
 
     template_id = Column(Integer, ForeignKey("templates.id"), nullable=True)
     template = relationship("Template", back_populates="proposals")
@@ -47,10 +51,14 @@ class Proposal(Base):
     timeline = Column(String, nullable=True)
     priority = Column(String, nullable=True)
     requirements = Column(Text, nullable=True)
+    comments = relationship("Comment", back_populates="proposal")
+
+    assigned_by_manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    assigned_by_manager = relationship("User", foreign_keys=[assigned_by_manager_id], back_populates="assigned_proposals")
     client_name = Column(String, nullable=True)
 
     sections = relationship("ProposalSection", back_populates="proposal")
-    comments = relationship("Comment", back_populates="proposal")
+
 
 class ProposalSection(Base):
     __tablename__ = "proposal_sections"
