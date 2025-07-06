@@ -45,6 +45,9 @@ class Proposal(Base):
 
     estimated_value = Column(Integer, nullable=True)
     timeline = Column(String, nullable=True)
+    priority = Column(String, nullable=True)
+    requirements = Column(Text, nullable=True)
+    client_name = Column(String, nullable=True)
 
     sections = relationship("ProposalSection", back_populates="proposal")
     comments = relationship("Comment", back_populates="proposal")

@@ -201,6 +201,10 @@ class ProposalCreate(BaseModel):
     template_id: Optional[int] = None
     estimated_value: Optional[int] = Field(None, alias="estimatedValue")
     timeline: Optional[str] = None
+    priority: Optional[str] = None           # New field
+    status: Optional[str] = None             # New field
+    requirements: Optional[str] = None       # New field
+    client_name: Optional[str] = None        # New field
 
 class ProposalOut(BaseModel):
     id: int
@@ -211,6 +215,10 @@ class ProposalOut(BaseModel):
     template_id: Optional[int] = None
     estimated_value: Optional[int] = Field(None, alias="estimatedValue")
     timeline: Optional[str] = None
+    priority: Optional[str] = None           # New field
+    status: Optional[str] = None             # New field
+    requirements: Optional[str] = None       # New field
+    client_name: Optional[str] = None        # New field
     model_config = {"from_attributes": True, "populate_by_name": True}
 
 class ProposalSectionAssignRequest(BaseModel):
@@ -324,6 +332,10 @@ def create_proposal(
         template_id=proposal.template_id,
         estimated_value=proposal.estimated_value,
         timeline=proposal.timeline,
+        priority=proposal.priority,             # New field
+        status=proposal.status,                 # New field
+        requirements=proposal.requirements,     # New field
+        client_name=proposal.client_name,       # New field
     )
     db.add(db_proposal)
     db.commit()
