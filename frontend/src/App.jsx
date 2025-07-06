@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { setUser, logout } from "./lib/features/authSlice"
+import { fetchProposalById } from "./lib/features/proposalSlice"
 import LoginForm from "./components/LoginForm"
 import SignupForm from "./components/SignupForm"
 import ProposalList from "./components/ProposalList"
@@ -73,6 +74,8 @@ function App() {
   }
 
   const handleViewProposal = (proposal) => {
+    // Fetch detailed proposal data from API
+    dispatch(fetchProposalById(proposal.id))
     setSelectedProposal(proposal)
     setCurrentView("details")
   }

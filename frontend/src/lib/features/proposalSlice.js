@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
+import { proposalsAPI } from "../api"
 
 // Mock data
 const mockProposals = [
@@ -64,29 +65,40 @@ const mockProposals = [
 ]
 
 // Async thunks
-export const fetchProposals = createAsyncThunk("proposals/fetchProposals", async () => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-  return mockProposals
-})
-
-export const createProposal = createAsyncThunk("proposals/createProposal", async (proposalData) => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  const newProposal = {
-    ...proposalData,
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString().split("T")[0],
-    updatedAt: new Date().toISOString().split("T")[0],
-    comments: [],
+export const fetchProposals = createAsyncThunk("proposals/fetchProposals", async (_, { rejectWithValue }) => {
+  try {
+    const response = await proposalsAPI.getAll()
+    return response
+  } catch (error) {
+    return rejectWithValue(error.message)
   }
-  return newProposal
 })
 
-export const updateProposal = createAsyncThunk("proposals/updateProposal", async ({ id, updates }) => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return { id, updates: { ...updates, updatedAt: new Date().toISOString().split("T")[0] } }
+export const createProposal = createAsyncThunk("proposals/createProposal", async (proposalData, { rejectWithValue }) => {
+  try {
+    const response = await proposalsAPI.create(proposalData)
+    return response
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
+
+export const updateProposal = createAsyncThunk("proposals/updateProposal", async ({ id, updates }, { rejectWithValue }) => {
+  try {
+    const response = await proposalsAPI.update(id, updates)
+    return { id, updates: response }
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
+
+export const fetchProposalById = createAsyncThunk("proposals/fetchProposalById", async (proposalId, { rejectWithValue }) => {
+  try {
+    const response = await proposalsAPI.getById(proposalId)
+    return response
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
 })
 
 export const addComment = createAsyncThunk("proposals/addComment", async ({ proposalId, comment }) => {
@@ -104,6 +116,7 @@ const proposalSlice = createSlice({
   name: "proposals",
   initialState: {
     items: [],
+    selectedProposal: null,
     loading: false,
     error: null,
     filters: {
@@ -118,6 +131,12 @@ const proposalSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null
+    },
+    setSelectedProposal: (state, action) => {
+      state.selectedProposal = action.payload
+    },
+    clearSelectedProposal: (state) => {
+      state.selectedProposal = null
     },
   },
   extraReducers: (builder) => {
@@ -145,6 +164,18 @@ const proposalSlice = createSlice({
           state.items[index] = { ...state.items[index], ...action.payload.updates }
         }
       })
+      // Fetch proposal by ID
+      .addCase(fetchProposalById.pending, (state) => {
+        state.loading = true
+      })
+      .addCase(fetchProposalById.fulfilled, (state, action) => {
+        state.loading = false
+        state.selectedProposal = action.payload
+      })
+      .addCase(fetchProposalById.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
       // Add comment
       .addCase(addComment.fulfilled, (state, action) => {
         const proposal = state.items.find((item) => item.id === action.payload.proposalId)
@@ -155,5 +186,5 @@ const proposalSlice = createSlice({
   },
 })
 
-export const { setFilters, clearError } = proposalSlice.actions
+export const { setFilters, clearError, setSelectedProposal, clearSelectedProposal } = proposalSlice.actions
 export default proposalSlice.reducer

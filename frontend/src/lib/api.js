@@ -79,12 +79,12 @@ export const authAPI = {
 export const proposalsAPI = {
   // Get all proposals
   getAll: async () => {
-    return apiRequest('/proposals')
+    return apiRequest('/list_proposal')
   },
 
   // Get single proposal
   getById: async (id) => {
-    return apiRequest(`/proposals/${id}`)
+    return apiRequest(`/get_proposal_by_id/${id}`)
   },
 
   // Create proposal
@@ -150,6 +150,42 @@ export const notificationsAPI = {
   }
 }
 
+// AI Summary API functions
+export const aiSummaryAPI = {
+  // Get AI generated summary from title and description
+  getSummary: async (title, description) => {
+    return apiRequest('/get_summary', {
+      method: 'POST',
+      body: JSON.stringify({ title, description })
+    })
+  },
+
+  // Read data from PDF and get summary
+  readPdfData: async (pdfFile) => {
+    const formData = new FormData()
+    formData.append('file', pdfFile)
+    
+    const url = `${API_BASE_URL}/read_data_from_pdf`
+    const token = getAuthToken()
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: formData
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return data
+  }
+}
+
 // Utility function to check if user is authenticated
 export const isAuthenticated = () => {
   return !!getAuthToken()
@@ -166,6 +202,7 @@ export default {
   templatesAPI,
   analyticsAPI,
   notificationsAPI,
+  aiSummaryAPI,
   isAuthenticated,
   logout
 } 

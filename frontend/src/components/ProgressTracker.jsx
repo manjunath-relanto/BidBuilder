@@ -7,13 +7,13 @@ import { CheckCircle, Circle, Clock, AlertCircle } from "lucide-react"
 export default function ProgressTracker({ proposal }) {
   const getWorkflowSteps = (status) => {
     const allSteps = [
-      { id: "draft", label: "Draft Created", description: "Initial proposal draft" },
-      { id: "review", label: "Under Review", description: "Team review and feedback" },
-      { id: "approved", label: "Approved", description: "Proposal approved by stakeholders" },
-      { id: "implementation", label: "Implementation", description: "Project implementation phase" },
+      { id: "Draft", label: "Draft Created", description: "Initial proposal draft" },
+      { id: "Under Review", label: "Under Review", description: "Team review and feedback" },
+      { id: "Approved", label: "Approved", description: "Proposal approved by stakeholders" },
+      { id: "Implementation", label: "Implementation", description: "Project implementation phase" },
     ]
 
-    const statusOrder = ["draft", "review", "approved", "implementation"]
+    const statusOrder = ["Draft", "Under Review", "Approved", "Implementation"]
     const currentIndex = statusOrder.indexOf(status)
 
     return allSteps.map((step, index) => ({
@@ -101,10 +101,10 @@ export default function ProgressTracker({ proposal }) {
         <div className="mt-6 p-3 bg-blue-50 rounded-lg">
           <h5 className="font-medium text-blue-900 mb-1">Next Steps</h5>
           <p className="text-sm text-blue-700">
-            {proposal.status === "draft" && "Submit proposal for team review"}
-            {proposal.status === "review" && "Awaiting stakeholder approval"}
-            {proposal.status === "approved" && "Ready for implementation planning"}
-            {proposal.status === "rejected" && "Review feedback and revise proposal"}
+            {proposal.status === "Draft" && "Submit proposal for team review"}
+            {proposal.status === "Under Review" && "Awaiting stakeholder approval"}
+            {proposal.status === "Approved" && "Ready for implementation planning"}
+            {proposal.status === "Rejected" && "Review feedback and revise proposal"}
           </p>
         </div>
       </CardContent>
