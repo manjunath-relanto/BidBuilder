@@ -37,14 +37,18 @@ export default function LoginForm({ onSwitchToSignup }) {
       // Store token in localStorage
       localStorage.setItem("access_token", data.access_token)
 
-      // Create user object from login data
+      // Create user object from login response data
       const user = {
-        id: "1", // We'll get this from the token payload if needed
-        name: formData.username,
-        email: `${formData.username}@example.com`,
-        role: "user",
+        id: data.sub || "1", // Use sub from token or default
+        name: data.username,
+        email: data.email,
+        role: data.role,
         avatar: "/placeholder.svg?height=40&width=40",
       }
+      
+      // Store user data in localStorage for role utilities
+      localStorage.setItem("user", JSON.stringify(user))
+      
       dispatch(setUser(user))
 
     } catch (error) {

@@ -108,6 +108,29 @@ export const proposalsAPI = {
     return apiRequest(`/proposals/${id}`, {
       method: 'DELETE'
     })
+  },
+
+  // Assign proposal to user
+  assignToUser: async (proposalId, userId) => {
+    return apiRequest('/proposals/assign_to_user', {
+      method: 'POST',
+      body: JSON.stringify({ proposal_id: proposalId, user_id: userId })
+    })
+  },
+
+  // Update proposal status
+  updateStatus: async (proposalId, status) => {
+    return apiRequest('/proposals/status', {
+      method: 'POST',
+      body: JSON.stringify({ proposal_id: proposalId, status })
+    })
+  },
+
+  // Submit back to manager
+  submitBackToManager: async (proposalId) => {
+    return apiRequest(`/proposals/submit_back_to_manager?proposal_id=${proposalId}`, {
+      method: 'POST'
+    })
   }
 }
 
@@ -124,6 +147,14 @@ export const templatesAPI = {
       method: 'POST',
       body: JSON.stringify(templateData)
     })
+  }
+}
+
+// User Management API functions
+export const userManagementAPI = {
+  // Get all users (for managers)
+  getAllUsers: async () => {
+    return apiRequest('/manager/users')
   }
 }
 
@@ -200,6 +231,7 @@ export default {
   authAPI,
   proposalsAPI,
   templatesAPI,
+  userManagementAPI,
   analyticsAPI,
   notificationsAPI,
   aiSummaryAPI,

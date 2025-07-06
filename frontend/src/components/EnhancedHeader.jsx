@@ -32,7 +32,7 @@ import {
 } from "lucide-react"
 import NotificationCenter from "./NotificationCenter"
 
-export default function EnhancedHeader({ currentView, onNavigate, onCreateProposal, onLogout }) {
+export default function EnhancedHeader({ currentView, onNavigate, onCreateProposal, onLogout, canCreateProposals, canCreateTemplates, userRole }) {
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth)
   const { unreadCount } = useSelector((state) => state.notifications)
@@ -65,8 +65,10 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "list", label: "Proposals", icon: FileText },
-    { id: "templates", label: "Templates", icon: FileTemplate },
-    { id: "team", label: "Team", icon: Users },
+    // Templates - Only for managers and admins
+    ...(userRole !== "user" ? [{ id: "templates", label: "Templates", icon: FileTemplate }] : []),
+    // Team - Only for managers and admins
+    ...(userRole !== "user" ? [{ id: "team", label: "Team", icon: Users }] : []),
   ]
 
   return (
@@ -136,14 +138,16 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
               />
             </div>
 
-            {/* Create Button */}
-            <Button
-              onClick={onCreateProposal}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">New Proposal</span>
-            </Button>
+            {/* Create Button - Only for managers and admins */}
+            {canCreateProposals && (
+              <Button
+                onClick={onCreateProposal}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">New Proposal</span>
+              </Button>
+            )}
 
             {/* Notifications */}
             <Popover>
@@ -181,7 +185,7 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
                     <p className="text-sm font-medium leading-none">{user?.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                     <Badge variant="secondary" className="w-fit text-xs mt-1">
-                      {user?.role}
+                      {userRole || user?.role || 'Unknown'}
                     </Badge>
                   </div>
                 </DropdownMenuLabel>
@@ -228,6 +232,20 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
                   </Button>
                 )
               })}
+              
+              {/* Mobile Create Button - Only for managers and admins */}
+              {canCreateProposals && (
+                <Button
+                  onClick={() => {
+                    onCreateProposal()
+                    setMobileMenuOpen(false)
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 w-full justify-start"
+                >
+                  <Plus className="h-4 w-4 mr-3" />
+                  New Proposal
+                </Button>
+              )}
               
               {/* Mobile Search */}
               <div className="relative mt-2 pt-2 border-t">

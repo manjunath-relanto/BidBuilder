@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { setUser, logout } from "./lib/features/authSlice"
 import { fetchProposalById } from "./lib/features/proposalSlice"
+import { canCreateProposals, canCreateTemplates, getUserRoleWithFallback } from "./lib/roleUtils"
 import LoginForm from "./components/LoginForm"
 import SignupForm from "./components/SignupForm"
 import ProposalList from "./components/ProposalList"
@@ -22,25 +23,33 @@ function App() {
   const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [authMode, setAuthMode] = useState("login") // "login" or "signup"
 
-  // Check for existing token on app load
+  // Check for existing token and user data on app load
   useEffect(() => {
     const token = localStorage.getItem("access_token")
-    if (token) {
-      // If token exists, assume user is authenticated
-      // We'll get user info from the token or use default values
-      const user = {
-        id: "1",
-        name: "User",
-        email: "user@example.com",
-        role: "user",
-        avatar: "/placeholder.svg?height=40&width=40",
+    const userData = localStorage.getItem("user")
+    
+    if (token && userData) {
+      try {
+        const user = JSON.parse(userData)
+        dispatch(setUser(user))
+      } catch (error) {
+        console.error("Error parsing user data from localStorage:", error)
+        // Fallback to default user if parsing fails
+        const user = {
+          id: "1",
+          name: "User",
+          email: "user@example.com",
+          role: "user",
+          avatar: "/placeholder.svg?height=40&width=40",
+        }
+        dispatch(setUser(user))
       }
-      dispatch(setUser(user))
     }
   }, [dispatch])
 
   const handleLogout = () => {
     localStorage.removeItem("access_token")
+    localStorage.removeItem("user")
     dispatch(logout())
     setCurrentView("dashboard")
     setSelectedProposal(null)
@@ -63,12 +72,17 @@ function App() {
   }
 
   const handleCreateProposal = () => {
+    if (!canCreateProposals()) {
+      alert("You don't have permission to create proposals. Only managers and administrators can create proposals.")
+      return
+    }
     setSelectedProposal(null)
     setSelectedTemplate(null)
     setCurrentView("create")
   }
 
   const handleEditProposal = (proposal) => {
+    // Role-based edit permission is handled in ProposalDetails component
     setSelectedProposal(proposal)
     setCurrentView("edit")
   }
@@ -87,6 +101,14 @@ function App() {
   }
 
   const handleNavigate = (view) => {
+    const userRole = getUserRoleWithFallback()
+    
+    // Check if user is trying to access restricted pages
+    if (userRole === "user" && (view === "templates" || view === "team")) {
+      alert("You don't have permission to access this page. Only managers and administrators can access Templates and Team pages.")
+      return
+    }
+    
     setCurrentView(view)
     setSelectedProposal(null)
   }
@@ -126,6 +148,9 @@ function App() {
         onNavigate={handleNavigate} 
         onCreateProposal={handleCreateProposal}
         onLogout={handleLogout}
+        canCreateProposals={canCreateProposals()}
+        canCreateTemplates={canCreateTemplates()}
+        userRole={getUserRoleWithFallback()}
       />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{renderCurrentView()}</main>
     </div>

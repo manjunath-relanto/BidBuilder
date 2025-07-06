@@ -25,7 +25,21 @@ export default function ProposalForm({ proposal = null, template = null, onClose
     priority: proposal?.priority || "Medium",
     status: proposal?.status || "Draft",
     timeline: proposal?.timeline || template?.timeline || "",
-    requirements: proposal?.requirements || template?.sections || [],
+    requirements: (() => {
+      // Handle requirements from proposal (string) or template (array)
+      if (proposal?.requirements) {
+        // If it's a string, split by comma and trim
+        if (typeof proposal.requirements === 'string') {
+          return proposal.requirements.split(',').map(req => req.trim()).filter(req => req.length > 0)
+        }
+        // If it's already an array, use it
+        if (Array.isArray(proposal.requirements)) {
+          return proposal.requirements
+        }
+      }
+      // Use template sections or empty array
+      return template?.sections || []
+    })(),
     category: proposal?.category || template?.category || "",
     template_id: template?.id || null,
   })
@@ -44,7 +58,7 @@ export default function ProposalForm({ proposal = null, template = null, onClose
     if (newRequirement.trim()) {
       setFormData((prev) => ({
         ...prev,
-        requirements: [...prev.requirements, newRequirement.trim()],
+        requirements: [...(Array.isArray(prev.requirements) ? prev.requirements : []), newRequirement.trim()],
       }))
       setNewRequirement("")
     }
@@ -53,7 +67,9 @@ export default function ProposalForm({ proposal = null, template = null, onClose
   const removeRequirement = (index) => {
     setFormData((prev) => ({
       ...prev,
-      requirements: prev.requirements.filter((_, i) => i !== index),
+      requirements: Array.isArray(prev.requirements) 
+        ? prev.requirements.filter((_, i) => i !== index)
+        : [],
     }))
   }
 
@@ -267,7 +283,7 @@ export default function ProposalForm({ proposal = null, template = null, onClose
               </Button>
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
-              {formData.requirements.map((req, index) => (
+              {Array.isArray(formData.requirements) && formData.requirements.map((req, index) => (
                 <Badge
                   key={index}
                   variant="secondary"

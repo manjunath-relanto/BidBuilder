@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { fetchTemplates } from "../lib/features/templatesSlice"
+import { canCreateTemplates } from "../lib/roleUtils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
@@ -75,13 +76,15 @@ export default function ProposalTemplates({ onUseTemplate }) {
           <h2 className="text-2xl font-bold">Proposal Templates</h2>
           <p className="text-muted-foreground">Choose from pre-built templates to accelerate your proposal creation</p>
         </div>
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Template
-        </Button>
+        {canCreateTemplates() && (
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Template
+          </Button>
+        )}
       </div>
 
       {/* Add the modal */}
