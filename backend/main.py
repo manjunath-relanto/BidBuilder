@@ -16,6 +16,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import uvicorn
+from fastapi import UploadFile, File, Form
 
 from db import Base, engine, get_db, SessionLocal
 from summary_generator import generate_summary
@@ -30,6 +31,7 @@ from models import (
     Notification,
 )
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
+from pdf_data_read import summarize_pdf
 
 
 from fastapi import FastAPI, Depends, HTTPException
@@ -510,6 +512,28 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.close()
+
+@app.post("/read_data_from_pdf")
+async def read_data_from_pdf(
+    file: UploadFile = File(...),
+    question: str = Form(...)
+):
+    """
+    Accepts a PDF file and a question, returns the summary generated from the PDF.
+    """
+    # Save the uploaded file temporarily
+    temp_path = f"temp_{file.filename}"
+    with open(temp_path, "wb") as f:
+        f.write(await file.read())
+
+    try:
+        summary = summarize_pdf(temp_path, question)
+    finally:
+        import os
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+    return {"summary": summary}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
