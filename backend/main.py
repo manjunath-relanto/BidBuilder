@@ -480,6 +480,15 @@ def delete_proposal(
     update_analytics(db)  # Update analytics after commit
     return {"ok": True, "message": "Proposal deleted"}
 
+# List Proposals
+@app.get("/list_proposal", response_model=List[ProposalOut])
+def list_proposal(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    proposals = db.query(Proposal).filter(Proposal.owner_id == user.id).all()
+    return proposals
+
 # Rebuild forward refs
 for m in (ProposalCreate, ProposalOut, ProposalTemplateCreate, ProposalTemplateOut):
     m.model_rebuild()
