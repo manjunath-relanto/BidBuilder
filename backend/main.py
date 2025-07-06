@@ -169,14 +169,15 @@ class ProposalOut(BaseModel):
     title: str
     description: str
     owner_id: int
+    owner_name: Optional[str] = None  # Add this field
     category: Optional[str] = None
     template_id: Optional[int] = None
     estimated_value: Optional[int] = Field(None, alias="estimatedValue")
     timeline: Optional[str] = None
-    priority: Optional[str] = None           # New field
-    status: Optional[str] = None             # New field
-    requirements: Optional[str] = None       # New field
-    client_name: Optional[str] = None        # New field
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    requirements: Optional[str] = None
+    client_name: Optional[str] = None
     model_config = {"from_attributes": True, "populate_by_name": True}
 
 class ProposalSectionAssignRequest(BaseModel):
@@ -501,7 +502,10 @@ def get_proposal_by_id(
     proposal = db.query(Proposal).filter(Proposal.id == proposal_id, Proposal.owner_id == user.id).first()
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    return proposal
+    # Add owner_name to the response
+    result = ProposalOut.model_validate(proposal)
+    result.owner_name = proposal.owner.username if proposal.owner else None
+    return result
 
 # Rebuild forward refs
 for m in (ProposalCreate, ProposalOut, ProposalTemplateCreate, ProposalTemplateOut):
