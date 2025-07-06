@@ -151,6 +151,7 @@ class Token(BaseModel):
     token_type: str
     username: str
     email: str
+    role: Optional[str] = None
 
 class ProposalCreate(BaseModel):
     title: str
@@ -278,6 +279,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "token_type": "bearer",
         "username": user.username,
         "email": user.email,
+        "role": user.role.name if user.role else None
     }
 
 @app.post("/proposals", response_model=ProposalOut)
@@ -286,7 +288,7 @@ def create_proposal(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role.name != "manager":
+    if user.role.name == "user":
         raise HTTPException(status_code=403, detail="Only managers can create proposals")
 
     db_proposal = Proposal(
@@ -316,7 +318,7 @@ def create_proposal_from_template(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role.name != "manager":
+    if user.role.name == "user":
         raise HTTPException(status_code=403, detail="Only managers can create proposals from templates")
 
     template = db.query(Template).filter(Template.id == template_id).first()
@@ -630,6 +632,3 @@ def submit_proposal_back_to_manager(
     proposal.requirements = None  # or mark as submitted
     db.commit()
     return {"ok": True, "message": f"Proposal {proposal.id} submitted back to manager"}
-
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
