@@ -58,6 +58,7 @@ class Proposal(Base):
     client_name = Column(String, nullable=True)
 
     sections = relationship("ProposalSection", back_populates="proposal")
+    chat_messages = relationship("ProposalChatMessage", back_populates="proposal")
 
 
 class ProposalSection(Base):
@@ -104,3 +105,15 @@ class Notification(Base):
     message = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_read = Column(Boolean, default=False)
+
+class ProposalChatMessage(Base):
+    __tablename__ = "proposal_chat_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    proposal_id = Column(Integer, ForeignKey("proposals.id"))
+    sender_id = Column(Integer, ForeignKey("users.id"))
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    visible_to_user = Column(Boolean, default=True)  # True until proposal is approved
+
+    proposal = relationship("Proposal", back_populates="chat_messages")
+    sender = relationship("User")
