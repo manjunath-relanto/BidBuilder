@@ -29,28 +29,28 @@ export default function ProposalList({ onViewProposal, onEditProposal }) {
     const matchesSearch =
       !filters.search ||
       proposal.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-      proposal.client.toLowerCase().includes(filters.search.toLowerCase())
+      proposal.client_name?.toLowerCase().includes(filters.search.toLowerCase())
 
     return matchesStatus && matchesPriority && matchesSearch
   })
 
   const getStatusColor = (status) => {
     const colors = {
-      draft: "bg-gray-100 text-gray-800",
-      review: "bg-yellow-100 text-yellow-800",
-      approved: "bg-green-100 text-green-800",
-      rejected: "bg-red-100 text-red-800",
+      "Draft": "bg-gray-100 text-gray-800",
+      "Under Review": "bg-yellow-100 text-yellow-800",
+      "Approved": "bg-green-100 text-green-800",
+      "Rejected": "bg-red-100 text-red-800",
     }
-    return colors[status] || colors.draft
+    return colors[status] || colors["Draft"]
   }
 
   const getPriorityColor = (priority) => {
     const colors = {
-      low: "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800",
-      medium: "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800",
-      high: "bg-gradient-to-r from-red-100 to-red-200 text-red-800",
+      "Low": "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800",
+      "Medium": "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800",
+      "High": "bg-gradient-to-r from-red-100 to-red-200 text-red-800",
     }
-    return colors[priority] || colors.medium
+    return colors[priority] || colors["Medium"]
   }
 
   const canEdit = (proposal) => {
@@ -85,10 +85,10 @@ export default function ProposalList({ onViewProposal, onEditProposal }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="review">Under Review</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="Draft">Draft</SelectItem>
+                <SelectItem value="Under Review">Under Review</SelectItem>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filters.priority} onValueChange={(value) => handleFilterChange("priority", value)}>
@@ -97,9 +97,9 @@ export default function ProposalList({ onViewProposal, onEditProposal }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="Low">Low</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="High">High</SelectItem>
               </SelectContent>
             </Select>
             <div className="text-sm text-muted-foreground flex items-center">
@@ -122,7 +122,7 @@ export default function ProposalList({ onViewProposal, onEditProposal }) {
                   <CardTitle className="text-lg">{proposal.title}</CardTitle>
                   <CardDescription className="flex items-center gap-1">
                     <User className="h-3 w-3" />
-                    {proposal.client}
+                    {proposal.client_name || 'No client'}
                   </CardDescription>
                 </div>
                 <div className="flex gap-1">
@@ -135,17 +135,19 @@ export default function ProposalList({ onViewProposal, onEditProposal }) {
 
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />${proposal.value.toLocaleString()}
+                  <DollarSign className="h-3 w-3" />${proposal.estimatedValue?.toLocaleString() || '0'}
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {proposal.timeline}
+                  {proposal.timeline || 'No timeline'}
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <Badge className={getStatusColor(proposal.status)}>{proposal.status}</Badge>
-                <div className="text-xs text-muted-foreground">Updated {proposal.updatedAt}</div>
+                <Badge className={getStatusColor(proposal.status)}>{proposal.status || 'Draft'}</Badge>
+                <div className="text-xs text-muted-foreground">
+                  {proposal.category && <span className="mr-2">Category: {proposal.category}</span>}
+                </div>
               </div>
 
               <div className="flex gap-2">

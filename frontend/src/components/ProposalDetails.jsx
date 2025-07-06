@@ -1,6 +1,6 @@
 "use client"
 
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
@@ -11,9 +11,27 @@ import CommentSection from "./CommentSection"
 import ProgressTracker from "./ProgressTracker"
 
 export default function ProposalDetails({ proposal, onEdit, onBack }) {
+  const dispatch = useDispatch()
   const { user } = useSelector((state) => state.auth)
+  const { selectedProposal, loading } = useSelector((state) => state.proposals)
+  
+  // Use selectedProposal from Redux if available, otherwise use the passed proposal
+  const currentProposal = selectedProposal || proposal
 
-  if (!proposal) {
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="text-center py-12">
+          <div className="flex items-center justify-center gap-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <p className="text-muted-foreground">Loading proposal details...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!currentProposal) {
     return (
       <Card>
         <CardContent className="text-center py-12">
@@ -43,7 +61,7 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
   }
 
   const canEdit = () => {
-    return user?.role === "admin" || user?.role === "manager" || proposal.createdBy === user?.email
+    return user?.role === "admin" || user?.role === "manager" || currentProposal.owner_id === user?.id
   }
 
   return (
@@ -56,12 +74,12 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{proposal.title}</h1>
-            <p className="text-muted-foreground">{proposal.client}</p>
+            <h1 className="text-2xl font-bold">{currentProposal.title}</h1>
+            <p className="text-muted-foreground">{currentProposal.client_name || 'No client'}</p>
           </div>
         </div>
         {canEdit() && (
-          <Button onClick={() => onEdit(proposal)}>
+          <Button onClick={() => onEdit(currentProposal)}>
             <Edit className="h-4 w-4 mr-1" />
             Edit Proposal
           </Button>
@@ -77,35 +95,35 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
               <CardTitle>Proposal Overview</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground">{proposal.description}</p>
+              <p className="text-muted-foreground">{currentProposal.description}</p>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-green-600" />
                   <div>
                     <p className="text-sm text-muted-foreground">Value</p>
-                    <p className="font-semibold">${proposal.value.toLocaleString()}</p>
+                    <p className="font-semibold">${currentProposal.estimatedValue?.toLocaleString() || '0'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <div>
                     <p className="text-sm text-muted-foreground">Timeline</p>
-                    <p className="font-semibold">{proposal.timeline}</p>
+                    <p className="font-semibold">{currentProposal.timeline || 'No timeline'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-orange-600" />
                   <div>
                     <p className="text-sm text-muted-foreground">Priority</p>
-                    <Badge className={getPriorityColor(proposal.priority)}>{proposal.priority}</Badge>
+                    <Badge className={getPriorityColor(currentProposal.priority?.toLowerCase())}>{currentProposal.priority || 'Medium'}</Badge>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-purple-600" />
                   <div>
                     <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge className={getStatusColor(proposal.status)}>{proposal.status}</Badge>
+                    <Badge className={getStatusColor(currentProposal.status?.toLowerCase())}>{currentProposal.status || 'Draft'}</Badge>
                   </div>
                 </div>
               </div>
@@ -119,21 +137,29 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {proposal.requirements.map((requirement, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span>{requirement}</span>
-                  </div>
-                ))}
+                {currentProposal.requirements ? (
+                  typeof currentProposal.requirements === 'string' ? (
+                    <p className="text-sm text-muted-foreground">{currentProposal.requirements}</p>
+                  ) : (
+                    currentProposal.requirements.map((requirement, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span>{requirement}</span>
+                      </div>
+                    ))
+                  )
+                ) : (
+                  <p className="text-sm text-muted-foreground">No requirements specified</p>
+                )}
               </div>
             </CardContent>
           </Card>
 
           {/* Progress Tracker */}
-          <ProgressTracker proposal={proposal} />
+          <ProgressTracker proposal={currentProposal} />
 
           {/* Comments */}
-          <CommentSection proposalId={proposal.id} comments={proposal.comments} />
+          <CommentSection proposalId={currentProposal.id} comments={currentProposal.comments || []} />
         </div>
 
         {/* Sidebar */}
@@ -149,9 +175,9 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
                 <div className="flex items-center gap-2 mt-1">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src="/placeholder.svg?height=24&width=24" />
-                    <AvatarFallback>{proposal.createdBy.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>{(currentProposal.owner_name || 'U').charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm">{proposal.createdBy}</span>
+                  <span className="text-sm">{currentProposal.owner_name || 'Unknown'}</span>
                 </div>
               </div>
 
