@@ -489,6 +489,18 @@ def list_proposal(
     proposals = db.query(Proposal).filter(Proposal.owner_id == user.id).all()
     return proposals
 
+# Get Proposal by ID
+@app.get("/get_proposal_by_id/{proposal_id}", response_model=ProposalOut)
+def get_proposal_by_id(
+    proposal_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    proposal = db.query(Proposal).filter(Proposal.id == proposal_id, Proposal.owner_id == user.id).first()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    return proposal
+
 # Rebuild forward refs
 for m in (ProposalCreate, ProposalOut, ProposalTemplateCreate, ProposalTemplateOut):
     m.model_rebuild()
