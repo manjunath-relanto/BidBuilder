@@ -14,6 +14,7 @@ import { DollarSign, Calendar, User, Clock, CheckCircle, Edit, ArrowLeft, Users,
 import CommentSection from "./CommentSection"
 import ProgressTracker from "./ProgressTracker"
 import AssignTeamMemberModal from "./AssignTeamMemberModal"
+import TeamDiscussion from "./TeamDiscussion"
 
 export default function ProposalDetails({ proposal, onEdit, onBack }) {
   const dispatch = useDispatch()
@@ -223,8 +224,8 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
           {/* Progress Tracker */}
           <ProgressTracker proposal={currentProposal} />
 
-          {/* Comments */}
-          <CommentSection proposalId={currentProposal.id} comments={currentProposal.comments || []} />
+          {/* Team Discussion (Chat) */}
+          <TeamDiscussion proposalId={currentProposal.id} />
         </div>
 
         {/* Sidebar */}
@@ -245,6 +246,20 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
                   <span className="text-sm">{currentProposal.owner_name || 'Unknown'}</span>
                 </div>
               </div>
+
+              {/* Assignee Name */}
+              {currentProposal.assignee_name && (
+                <div>
+                  <p className="text-sm text-muted-foreground mt-2">Assigned to</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src="/placeholder.svg?height=24&width=24" />
+                      <AvatarFallback>{currentProposal.assignee_name.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{currentProposal.assignee_name}</span>
+                  </div>
+                </div>
+              )}
 
               <Separator />
 

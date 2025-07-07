@@ -131,6 +131,19 @@ export const proposalsAPI = {
     return apiRequest(`/proposals/submit_back_to_manager?proposal_id=${proposalId}`, {
       method: 'POST'
     })
+  },
+
+  // Get chat messages for a proposal
+  getChatMessages: async (proposalId) => {
+    return apiRequest(`/proposals/${proposalId}/chat`)
+  },
+
+  // Post a new chat message for a proposal
+  postChatMessage: async (proposalId, content) => {
+    return apiRequest(`/proposals/${proposalId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    })
   }
 }
 
