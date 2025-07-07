@@ -63,7 +63,8 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
   }
 
   const navigationItems = [
-    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    // Dashboard - Only for non-user roles
+    ...(userRole !== "user" ? [{ id: "dashboard", label: "Dashboard", icon: BarChart3 }] : []),
     { id: "list", label: "Proposals", icon: FileText },
     // Templates - Only for managers and admins
     ...(userRole !== "user" ? [{ id: "templates", label: "Templates", icon: FileTemplate }] : []),

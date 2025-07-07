@@ -15,10 +15,21 @@ import ProposalTemplates from "./components/ProposalTemplates"
 import TeamPage from "./components/TeamPage"
 import EnhancedHeader from "./components/EnhancedHeader"
 
+function getInitialView() {
+  const userData = localStorage.getItem("user")
+  if (userData) {
+    try {
+      const user = JSON.parse(userData)
+      if (user.role === "user") return "list"
+    } catch {}
+  }
+  return "dashboard"
+}
+
 function App() {
   const dispatch = useDispatch()
   const { isAuthenticated } = useSelector((state) => state.auth)
-  const [currentView, setCurrentView] = useState("dashboard")
+  const [currentView, setCurrentView] = useState(getInitialView())
   const [selectedProposal, setSelectedProposal] = useState(null)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [authMode, setAuthMode] = useState("login") // "login" or "signup"
