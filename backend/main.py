@@ -4,7 +4,7 @@ from __future__ import annotations
 import sys, json
 from pathlib import Path
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Any
 
 sys.path.append(str(Path(__file__).parent.resolve()))
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +29,7 @@ from models import (
     Template,
     Analytics,
     Notification,
+    ProposalChatMessage,  # <-- add this
 )
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
 from pdf_data_read import summarize_pdf
@@ -247,6 +248,24 @@ class SubmitBackToManager(BaseModel):
 
 class ApproveProposal(BaseModel):
     proposal_id: int
+
+# --- Chat Schemas ---
+class ChatMessageCreate(BaseModel):
+    content: str
+
+class ChatMessageOut(BaseModel):
+    id: int
+    sender_id: int
+    content: str
+    created_at: datetime 
+    
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime, _info) -> str:
+        return value.isoformat() if value else None
+
+    model_config = {
+        "from_attributes": True  
+    }
 
 # Auth Endpoints
 @app.post("/register", response_model=UserOut)
@@ -701,6 +720,10 @@ def approve_submitted_proposal(
     proposal.owner_id = user.id
     proposal.status = "Approved"
     proposal.requirements = None
+
+    # Hide chat from user after approval
+    db.query(ProposalChatMessage).filter_by(proposal_id=proposal_id).update({"visible_to_user": False})
+
     db.commit()
     return {"ok": True, "message": f"Proposal {proposal.id} approved and reassigned to manager"}
 
@@ -733,3 +756,52 @@ def manager_pending_approval(
         Proposal.assigned_by_manager_id == user.id
     ).all()
     return proposals
+
+
+
+# --- Proposal Chat Endpoints ---
+
+@app.post("/proposals/{proposal_id}/chat", response_model=ChatMessageOut)
+def send_proposal_chat_message(
+    proposal_id: int,
+    msg: ChatMessageCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    # Only assigned user or manager can send messages
+    allowed_users = [proposal.owner_id, proposal.assigned_by_manager_id]
+    if user.id not in allowed_users:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    visible_to_user = proposal.status != "Approved"
+    chat_msg = ProposalChatMessage(
+        proposal_id=proposal_id,
+        sender_id=user.id,
+        content=msg.content,
+        visible_to_user=visible_to_user,
+    )
+    db.add(chat_msg)
+    db.commit()
+    db.refresh(chat_msg)
+    return chat_msg
+
+@app.get("/proposals/{proposal_id}/chat", response_model=List[ChatMessageOut])
+def get_proposal_chat_messages(
+    proposal_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    proposal = db.query(Proposal).filter(Proposal.id == proposal_id).first()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    allowed_users = [proposal.owner_id, proposal.assigned_by_manager_id]
+    if user.id not in allowed_users:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    # If proposal is approved and user is not manager, hide messages
+    if proposal.status == "Approved" and user.id == proposal.owner_id:
+        messages = db.query(ProposalChatMessage).filter_by(proposal_id=proposal_id, visible_to_user=True).all()
+    else:
+        messages = db.query(ProposalChatMessage).filter_by(proposal_id=proposal_id).all()
+    return messages
