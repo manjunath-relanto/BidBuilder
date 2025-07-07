@@ -54,7 +54,7 @@ export default function ProposalList({ onViewProposal, onEditProposal }) {
   }
 
   const canEdit = (proposal) => {
-    return user?.role === "admin" || user?.role === "manager" || proposal.createdBy === user?.email
+    return user?.role === "admin" || user?.role === "manager" || user?.role === "user" || proposal.createdBy === user?.email
   }
 
   if (loading) {
