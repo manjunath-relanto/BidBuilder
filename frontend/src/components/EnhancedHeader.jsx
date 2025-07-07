@@ -139,16 +139,14 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
               />
             </div>
 
-            {/* Create Button - Only for managers and admins */}
-            {canCreateProposals && (
-              <Button
-                onClick={onCreateProposal}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">New Proposal</span>
-              </Button>
-            )}
+            {/* Create Button - Show for all authenticated users */}
+            <Button
+              onClick={onCreateProposal}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">New Proposal</span>
+            </Button>
 
             {/* Notifications */}
             <Popover>

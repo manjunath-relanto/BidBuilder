@@ -281,17 +281,15 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Assign Team Member - Only for managers and admins */}
-              {canAssignProposals() && (
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start bg-transparent hover:bg-blue-50"
-                  onClick={() => setShowAssignModal(true)}
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Assign Team Member
-                </Button>
-              )}
+              {/* Assign Team Member - Show for all authenticated users */}
+              <Button 
+                variant="outline" 
+                className="w-full justify-start bg-transparent hover:bg-blue-50"
+                onClick={() => setShowAssignModal(true)}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Assign Team Member
+              </Button>
 
               {/* Status Update - For all authenticated users */}
               {canUpdateProposalStatus() && (
