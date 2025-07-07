@@ -86,8 +86,6 @@ API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 ## Documentation
 - See `backend/BACKEND_README.md` for technical details
 - See `backend/Backend_Usage_documentation.MD` for API usage examples
-- See `backend/SECURITY_TESTING_GUIDE.md` for security and testing guidance
-
 ---
 
 # Further Information
