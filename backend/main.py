@@ -604,9 +604,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 @app.post("/read_data_from_pdf")
 async def read_data_from_pdf(
-    file: UploadFile = File(...),
-    question: str = Form(...)
-):
+    file: UploadFile = File(...)):
     """
     Accepts a PDF file and a question, returns the summary generated from the PDF.
     """
@@ -616,7 +614,7 @@ async def read_data_from_pdf(
         f.write(await file.read())
 
     try:
-        summary = summarize_pdf(temp_path, question)
+        summary = summarize_pdf(temp_path)
     finally:
         import os
         if os.path.exists(temp_path):
