@@ -77,7 +77,9 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
 
   const canEdit = () => {
     const userRole = getUserRoleWithFallback(user)
-    return canEditProposals() && (userRole === "admin" || userRole === "manager" || currentProposal.owner_id === user?.id)
+    if (userRole === "admin" || userRole === "manager") return true
+    if (userRole === "user" && currentProposal.owner_id === user?.id) return true
+    return false
   }
 
   const handleStatusSelection = (newStatus) => {
@@ -95,8 +97,8 @@ export default function ProposalDetails({ proposal, onEdit, onBack }) {
     try {
       await proposalsAPI.updateStatus(currentProposal.id, selectedStatus)
       alert("Status updated successfully!")
-      // Refresh the proposal data
-      window.location.reload()
+      // Redirect to proposals list
+      onBack?.()
     } catch (error) {
       console.error("Error updating status:", error)
       alert("Failed to update status. Please try again.")

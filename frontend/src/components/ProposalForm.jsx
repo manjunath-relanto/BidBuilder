@@ -131,12 +131,20 @@ export default function ProposalForm({ proposal = null, template = null, onClose
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Convert requirements array to string for API
+    // Format data according to API requirements
     const apiData = {
-      ...formData,
+      title: formData.title,
+      description: formData.description,
+      category: formData.category,
+      template_id: formData.template_id || 0,
+      estimatedValue: Number(formData.estimatedValue) || 0,
+      timeline: formData.timeline,
+      priority: formData.priority,
+      status: formData.status,
       requirements: Array.isArray(formData.requirements) 
         ? formData.requirements.join(", ")
-        : formData.requirements
+        : formData.requirements || "",
+      client_name: formData.client_name
     }
 
     if (isEditing) {

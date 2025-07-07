@@ -101,7 +101,7 @@ export default function AssignTeamMemberModal({ proposal, onClose, onSuccess }) 
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
                       <div className="flex items-center gap-2">
-                        <span>{user.name || user.email}</span>
+                        <span>{user.username || user.name || user.email}</span>
                         <Badge className={getRoleColor(user.role)}>
                           {getRoleDisplayName(user.role)}
                         </Badge>
@@ -124,7 +124,7 @@ export default function AssignTeamMemberModal({ proposal, onClose, onSuccess }) 
                 const selectedUser = users.find(u => u.id.toString() === selectedUserId)
                 return selectedUser ? (
                   <div className="text-sm text-blue-700">
-                    <p><strong>Name:</strong> {selectedUser.name || 'N/A'}</p>
+                    <p><strong>Name:</strong> {selectedUser.username || selectedUser.name || 'N/A'}</p>
                     <p><strong>Email:</strong> {selectedUser.email}</p>
                     <p><strong>Role:</strong> {getRoleDisplayName(selectedUser.role)}</p>
                   </div>
