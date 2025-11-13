@@ -94,12 +94,19 @@ def init_analytics(db: Session) -> None:
 
 @app.on_event("startup")
 def on_startup() -> None:
-    db = SessionLocal()
-    seed_templates(db)
-    init_analytics(db)
-    update_analytics(db)
-    db.close()
-
+    try:
+        db = SessionLocal()
+        seed_templates(db)
+        init_analytics(db)
+        try:
+            update_analytics(db)
+        except Exception as e:
+            print(f"Warning: Analytics update failed: {e}")
+        db.close()
+    except Exception as e:
+        print(f"Startup error: {e}")
+        import traceback
+        traceback.print_exc()
 def update_analytics(db: Session) -> None:
     status_counts = db.query(Proposal.status, func.count(Proposal.id)).group_by(Proposal.status).all()
     proposals_by_status = {s or "Unknown": c for s, c in status_counts}
