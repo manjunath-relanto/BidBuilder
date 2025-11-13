@@ -10,11 +10,11 @@ import sys
 from pathlib import Path
 
 import pdfplumber
-from langchain.docstore.document import Document
-from langchain.text_splitter import CharacterTextSplitter
+from langchain_core.documents import Document
+from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.llms import Ollama  # Updated import
-from langchain.chains.summarize import load_summarize_chain
-from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import PromptTemplate
 
 
 def extract_text(pdf_path: Path) -> str:
@@ -55,23 +55,19 @@ def generate_summary_from_pdf(
     llm = Ollama(model=model_name, base_url=base_url, temperature=0.1)
 
     # 4) Define a simple prompt for summarization
-    summary_prompt = PromptTemplate(
-        input_variables=["text"],
-        template=(
-            "Please provide a concise 4-5 line summary of the following document. "
-            "Focus on the main topic, key points, and essential information:\n\n"
-            "{text}\n\n"
-            "Summary:"
-        ),
+    summary_prompt = PromptTemplate.from_template(
+        "Please provide a concise 4-5 line summary of the following document. "
+        "Focus on the main topic, key points, and essential information:\n\n"
+        "{text}\n\n"
+        "Summary:"
     )
 
-    # 5) Create a simple summarization chain
-    from langchain.chains import LLMChain
-    chain = LLMChain(llm=llm, prompt=summary_prompt, verbose=True)
+    # 5) Create a simple summarization chain using the new LangChain API
+    chain = summary_prompt | llm
 
     # 6) Run the chain on the full text
-    summary = chain.run(raw_text)
-    return summary.strip()
+    result = chain.invoke({"text": raw_text})
+    return result.strip()
 
 
 def summarize_pdf(pdf_path_str: str) -> str:
