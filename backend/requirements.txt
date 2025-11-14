@@ -16,7 +16,6 @@ langchain
 langchain-community
 langchain-core
 langchain-ollama
-
-langchain-core 
+ 
 pdfplumber
 transformers
