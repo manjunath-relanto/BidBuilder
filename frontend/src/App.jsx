@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSelector, useDispatch } from "react-redux"
 import { setUser, logout } from "./lib/features/authSlice"
 import { fetchProposalById } from "./lib/features/proposalSlice"
@@ -13,6 +13,7 @@ import ProposalDetails from "./components/ProposalDetails"
 import AnalyticsDashboard from "./components/AnalyticsDashboard"
 import ProposalTemplates from "./components/ProposalTemplates"
 import TeamPage from "./components/TeamPage"
+import WebSocketPage from "./components/WebSocketPage"
 import EnhancedHeader from "./components/EnhancedHeader"
 
 function getInitialView() {
@@ -32,9 +33,8 @@ function App() {
   const [currentView, setCurrentView] = useState(getInitialView())
   const [selectedProposal, setSelectedProposal] = useState(null)
   const [selectedTemplate, setSelectedTemplate] = useState(null)
-  const [authMode, setAuthMode] = useState("login") // "login" or "signup"
+  const [authMode, setAuthMode] = useState("login")
 
-  // Check for existing token and user data on app load
   useEffect(() => {
     const token = localStorage.getItem("access_token")
     const userData = localStorage.getItem("user")
@@ -45,7 +45,6 @@ function App() {
         dispatch(setUser(user))
       } catch (error) {
         console.error("Error parsing user data from localStorage:", error)
-        // Fallback to default user if parsing fails
         const user = {
           id: "1",
           name: "User",
@@ -93,13 +92,11 @@ function App() {
   }
 
   const handleEditProposal = (proposal) => {
-    // Role-based edit permission is handled in ProposalDetails component
     setSelectedProposal(proposal)
     setCurrentView("edit")
   }
 
   const handleViewProposal = (proposal) => {
-    // Fetch detailed proposal data from API
     dispatch(fetchProposalById(proposal.id))
     setSelectedProposal(proposal)
     setCurrentView("details")
@@ -111,18 +108,33 @@ function App() {
     setSelectedTemplate(null)
   }
 
-  const handleNavigate = (view) => {
+  const handleNavigate = useCallback((view) => {
     const userRole = getUserRoleWithFallback()
     
-    // Check if user is trying to access restricted pages
-    if (userRole === "user" && (view === "templates" || view === "team")) {
-      alert("You don't have permission to access this page. Only managers and administrators can access Templates and Team pages.")
+    if (userRole === "user" && (view === "templates" || view === "team" || view === "websocket")) {
+      alert("You don't have permission to access this page. Only managers and administrators can access Templates, Team, and WebSocket pages.")
       return
     }
     
     setCurrentView(view)
     setSelectedProposal(null)
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === "undefined") return
+    if (window.location.pathname === "/websocket" && currentView !== "websocket") {
+      handleNavigate("websocket")
+    }
+  }, [isAuthenticated, currentView, handleNavigate])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (currentView === "websocket" && window.location.pathname !== "/websocket") {
+      window.history.replaceState(null, "", "/websocket")
+    } else if (currentView !== "websocket" && window.location.pathname === "/websocket") {
+      window.history.replaceState(null, "", "/")
+    }
+  }, [currentView])
 
   const handleUseTemplate = (template) => {
     setSelectedTemplate(template)
@@ -138,6 +150,8 @@ function App() {
         return <ProposalTemplates onUseTemplate={handleUseTemplate} />
       case "team":
         return <TeamPage />
+      case "websocket":
+        return <WebSocketPage />
       case "create":
       case "edit":
         return <ProposalForm 

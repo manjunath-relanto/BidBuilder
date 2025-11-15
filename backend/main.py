@@ -10,7 +10,7 @@ sys.path.append(str(Path(__file__).parent.resolve()))
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import event
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -810,3 +810,83 @@ def get_proposal_chat_messages(
     else:
         messages = db.query(ProposalChatMessage).filter_by(proposal_id=proposal_id).all()
     return messages
+
+
+# --- WebSocket Streaming Endpoint ---
+import asyncio
+import time
+
+
+def generate_proposal_summary_stream(title: str, description: str):
+    """
+    Generator function that yields proposal summary chunks progressively.
+    Simulates streaming response similar to ChatGPT.
+    """
+    # Simulate multi-step processing with delays (like ChatGPT token generation)
+    sections = [
+        f"# {title}\n\n",
+        "## Executive Summary\n",
+        f"This proposal addresses the core requirements outlined in '{title}'. ",
+        "The solution is designed to provide maximum value and efficiency. ",
+        "Key benefits include improved productivity, reduced costs, and enhanced user experience.\n\n",
+        "## Overview\n",
+        description[:100] + "... " if len(description) > 100 else description + "\n\n",
+        "## Key Features\n",
+        "- Scalable architecture\n",
+        "- Real-time monitoring\n",
+        "- Comprehensive reporting\n",
+        "- 24/7 support\n\n",
+        "## Implementation Timeline\n",
+        "- Phase 1 (Weeks 1-4): Planning and design\n",
+        "- Phase 2 (Weeks 5-8): Development\n",
+        "- Phase 3 (Weeks 9-10): Testing and deployment\n\n",
+        "## Cost Estimate\n",
+        "Total investment: $50,000 - $75,000\n",
+        "ROI expected within 6-8 months\n\n",
+        "## Conclusion\n",
+        "This proposal provides a comprehensive solution tailored to meet your business needs. "
+        "We are confident in our ability to deliver results on time and within budget."
+    ]
+    
+    for section in sections:
+        yield section
+        time.sleep(0.1)  # Add small delay to simulate streaming
+
+
+@app.websocket("/ws/proposals/stream")
+async def websocket_proposal_stream(websocket: WebSocket):
+    """
+    WebSocket endpoint for streaming proposal summaries.
+    Streams proposal data in chunks, similar to ChatGPT streaming.
+    """
+    await websocket.accept()
+    
+    try:
+        # Receive initial message with title/description
+        data = await websocket.receive_json()
+        title = data.get("title", "Proposal")
+        description = data.get("description", "No description provided")
+        
+        print(f"WebSocket stream started - Title: {title}")
+        
+        # Stream the proposal summary chunks
+        for chunk in generate_proposal_summary_stream(title, description):
+            await websocket.send_text(chunk)
+            await asyncio.sleep(0.05)  # Small async sleep to allow interruption
+        
+        # Send end-of-stream marker
+        await websocket.send_json({"status": "complete"})
+        print(f"WebSocket stream completed - Title: {title}")
+        
+    except WebSocketDisconnect:
+        print(f"Client disconnected from proposal stream")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        import traceback
+        traceback.print_exc()
+        try:
+            await websocket.send_json({"error": str(e)})
+        except:
+            pass
+        finally:
+            await websocket.close()

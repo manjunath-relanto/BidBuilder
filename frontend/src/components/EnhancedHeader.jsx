@@ -68,6 +68,8 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
     { id: "list", label: "Proposals", icon: FileText },
     // Templates - Only for managers and admins
     ...(userRole !== "user" ? [{ id: "templates", label: "Templates", icon: FileTemplate }] : []),
+     ...(userRole !== "user" ? [{ id: "websocket", label: "websocket", icon: FileTemplate }] : []),
+        // { id: "websocket", label: "websocket", icon: FileTemplate },
     // Team - Only for managers and admins
     ...(userRole !== "user" ? [{ id: "team", label: "Team", icon: Users }] : []),
   ]

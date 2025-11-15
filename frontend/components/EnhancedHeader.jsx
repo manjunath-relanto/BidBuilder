@@ -45,6 +45,7 @@ export default function EnhancedHeader({ currentView, onNavigate, onCreatePropos
     { id: "list", label: "Proposals", icon: FileText },
     { id: "templates", label: "Templates", icon: FileTemplate },
     { id: "team", label: "Team", icon: Users },
+    { id: "websocket", label: "websocket", icon: FileTemplate },
   ]
 
   return (
