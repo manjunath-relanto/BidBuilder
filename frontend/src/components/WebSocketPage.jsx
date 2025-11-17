@@ -19,6 +19,12 @@ export default function WebSocketPage() {
   const [copySuccess, setCopySuccess] = useState(false)
   const wsRef = useRef(null)
   const streamBufferRef = useRef("")
+  const streamOutputRef = useRef(null)
+  const isStreamingActive = status === "connecting" || status === "streaming"
+  const showMagicBadge = status === "connecting"
+  const streamShellClass = isStreamingActive
+    ? "rounded-3xl transition-all duration-300 p-[5px] animate-gradient-border shadow-[0_0_50px_rgba(59,130,246,0.55)]"
+    : "rounded-3xl transition-all duration-300 p-[2px] border border-gray-200"
 
   // Clean up WebSocket on unmount
   useEffect(() => {
@@ -29,7 +35,15 @@ export default function WebSocketPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!streamOutputRef.current) return
+    streamOutputRef.current.scrollTop = streamOutputRef.current.scrollHeight
+  }, [streamingResponse])
+
   const handleStreamProposal = async () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.close(4000, "Superseded by new request")
+    }
     // Validation
     if (!title.trim()) {
       setError("Title is required")
@@ -68,7 +82,7 @@ export default function WebSocketPage() {
       }
       
       console.log(`🔌 Attempting WebSocket connection to: ${wsUrl}`)
-      console.info("Checklist ➜ 1) Confirm backend listens on :8000  2) Path is /proposals  3) Host matches 127.0.0.1  4) Protocol matches page (ws/wss)")
+      console.info("Checklist ➜ 1) Confirm backend listens on :8000  2) Path matches backend WS route  3) Host matches 127.0.0.1  4) Protocol matches page (ws/wss)")
 
       wsRef.current = new WebSocket(wsUrl)
 
@@ -76,7 +90,7 @@ export default function WebSocketPage() {
         console.log("✅ WebSocket connected successfully")
         setStatus("streaming")
         
-        // Send the proposal data to start streaming
+        // Send the stream payload to start streaming
         wsRef.current.send(
           JSON.stringify({
             title: title.trim(),
@@ -166,7 +180,7 @@ export default function WebSocketPage() {
     const element = document.createElement("a")
     const file = new Blob([streamingResponse], { type: "text/plain" })
     element.href = URL.createObjectURL(file)
-    element.download = `proposal-summary-${Date.now()}.txt`
+    element.download = `stream-response-${Date.now()}.txt`
     document.body.appendChild(element)
     element.click()
     document.body.removeChild(element)
@@ -184,30 +198,29 @@ export default function WebSocketPage() {
     }
   }
 
-  return (
+  return ( 
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">WebSocket Streaming</h1>
-          <p className="text-gray-600">Create proposals and stream real-time responses using WebSocket or receive complete summaries</p>
-        </div>
+        {/* <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Realtime Stream Studio</h1>
+          <p className="text-gray-600">Send any title + description combo and watch the WebSocket stream paint the response live.</p>
+        </div> */}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Input Form */}
           <Card className="lg:h-fit">
             <CardHeader>
-              <CardTitle>Create Proposal</CardTitle>
-              <CardDescription>Enter proposal details to stream data</CardDescription>
+              <CardTitle>Stream Input</CardTitle>
+              <CardDescription>Describe what you need and trigger the live channel</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                 <Input
-                  placeholder="Enter proposal title"
+                  placeholder="Name your request"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  disabled={isLoading}
                   className="w-full"
                 />
               </div>
@@ -215,10 +228,9 @@ export default function WebSocketPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <Textarea
-                  placeholder="Enter proposal description"
+                  placeholder="Share context, goals, or constraints"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  disabled={isLoading}
                   className="w-full min-h-32"
                 />
               </div>
@@ -277,20 +289,35 @@ export default function WebSocketPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleStreamProposal}
-                  disabled={isLoading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    "Start Streaming"
-                  )}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    onClick={handleStreamProposal}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Start Streaming"
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                        wsRef.current.close(4001, "Stopped by user")
+                      }
+                      setIsLoading(false)
+                      setStatus("idle")
+                    }}
+                    variant="outline"
+                    className="flex-none"
+                    disabled={!isStreamingActive}
+                  >
+                    Stop
+                  </Button>
+                </div>
                 <Button onClick={handleReset} variant="outline" disabled={isLoading} className="flex-1">
                   Reset
                 </Button>
@@ -299,48 +326,61 @@ export default function WebSocketPage() {
           </Card>
 
           {/* Streaming Response */}
-          <Card className="lg:h-fit">
-            <CardHeader>
-              <CardTitle>Response Summary</CardTitle>
-              <CardDescription>Full proposal summary and analysis</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-gray-900 text-gray-100 rounded-lg p-4 min-h-96 max-h-96 overflow-y-auto font-mono text-sm">
-                {streamingResponse ? (
-                  <div className="space-y-1 whitespace-pre-wrap">
-                    {streamingResponse}
-                    {status === "streaming" && (
-                      <span className="text-blue-400 animate-pulse">▌</span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-gray-500 italic flex items-center justify-center h-full">
-                    {status === "idle" ? "Waiting for input..." : "Processing proposal..."}
-                  </div>
-                )}
+          <Card >
+            <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle>Live Response Canvas</CardTitle>
+                <CardDescription>Watch the stream animate in real-time</CardDescription>
               </div>
-
-              {/* Action Buttons */}
               {streamingResponse && (
-                <div className="flex gap-2">
+                <div className="flex w-full md:w-auto gap-2">
                   <Button
+                    size="sm"
                     onClick={handleCopyResponse}
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 md:flex-none"
                   >
-                    <Copy className="w-4 h-4 mr-2" />
-                    {copySuccess ? "Copied!" : "Copy"}
+                    <Copy className="w-3.5 h-3.5 mr-1.5" />
+                    {copySuccess ? "Copied" : "Copy"}
                   </Button>
                   <Button
+                    size="sm"
                     onClick={handleDownloadResponse}
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 md:flex-none"
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    Save
                   </Button>
                 </div>
               )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className={`${streamShellClass} min-h-[28rem]`}>
+                <div
+                  ref={streamOutputRef}
+                  className="relative bg-gray-900 text-gray-100 rounded-2xl p-2 min-h-[28rem] max-h-[28rem] overflow-y-auto font-mono text-sm scroll-stealth"
+                >
+                  {showMagicBadge && (
+                    <div className="absolute top-4 right-4 flex items-center gap-2 text-[10px] uppercase tracking-widest text-cyan-200 pointer-events-none">
+                      <Loader className="w-4 h-4 animate-spin text-cyan-300" />
+                      <span>Priming stream</span>
+                    </div>
+                  )}
+                  {streamingResponse ? (
+                    <div className="space-y-1 whitespace-pre-wrap">
+                      {streamingResponse}
+                      {status === "streaming" && (
+                        <span className="text-blue-400 animate-pulse">▌</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 italic flex items-center justify-center h-full">
+                      {status === "idle" ? "Waiting for your prompt..." : "Summoning the stream..."}
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

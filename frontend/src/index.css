@@ -162,3 +162,30 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-border {
+  background-image: linear-gradient(120deg, #22d3ee, #3b82f6, #a855f7, #3b82f6, #22d3ee);
+  background-size: 200% 200%;
+  animation: gradient-shift 4s linear infinite;
+}
+
+.scroll-stealth {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scroll-stealth::-webkit-scrollbar {
+  display: none;
+}

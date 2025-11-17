@@ -73,14 +73,6 @@ function App() {
     setAuthMode("login")
   }
 
-  if (!isAuthenticated) {
-    return authMode === "login" ? (
-      <LoginForm onSwitchToSignup={handleSwitchToSignup} />
-    ) : (
-      <SignupForm onSwitchToLogin={handleSwitchToLogin} />
-    )
-  }
-
   const handleCreateProposal = () => {
     if (!canCreateProposals()) {
       alert("You don't have permission to create proposals. Only managers and administrators can create proposals.")
@@ -136,6 +128,14 @@ function App() {
     }
   }, [currentView])
 
+  if (!isAuthenticated) {
+    return authMode === "login" ? (
+      <LoginForm onSwitchToSignup={handleSwitchToSignup} />
+    ) : (
+      <SignupForm onSwitchToLogin={handleSwitchToLogin} />
+    )
+  }
+
   const handleUseTemplate = (template) => {
     setSelectedTemplate(template)
     setSelectedProposal(null)
@@ -168,7 +168,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      <EnhancedHeader 
+      {/* <EnhancedHeader 
         currentView={currentView} 
         onNavigate={handleNavigate} 
         onCreateProposal={handleCreateProposal}
@@ -176,7 +176,7 @@ function App() {
         canCreateProposals={canCreateProposals()}
         canCreateTemplates={canCreateTemplates()}
         userRole={getUserRoleWithFallback()}
-      />
+      /> */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{renderCurrentView()}</main>
     </div>
   )
