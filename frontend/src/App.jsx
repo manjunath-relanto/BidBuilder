@@ -36,8 +36,22 @@ function App() {
   const [authMode, setAuthMode] = useState("login")
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    const userData = localStorage.getItem("user")
+    let token = localStorage.getItem("access_token")
+    let userData = localStorage.getItem("user")
+    
+    // Set default data if not present for testing
+    if (!token || !userData) {
+      token = "default_test_token_12345"
+      userData = JSON.stringify({
+        id: "1",
+        name: "Test User",
+        email: "test@example.com",
+        role: "manager",
+        avatar: "/placeholder.svg?height=40&width=40",
+      })
+      localStorage.setItem("access_token", token)
+      localStorage.setItem("user", userData)
+    }
     
     if (token && userData) {
       try {
@@ -168,7 +182,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      {/* <EnhancedHeader 
+     {/* <EnhancedHeader 
         currentView={currentView} 
         onNavigate={handleNavigate} 
         onCreateProposal={handleCreateProposal}
@@ -176,7 +190,7 @@ function App() {
         canCreateProposals={canCreateProposals()}
         canCreateTemplates={canCreateTemplates()}
         userRole={getUserRoleWithFallback()}
-      /> */}
+      />  */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{renderCurrentView()}</main>
     </div>
   )
