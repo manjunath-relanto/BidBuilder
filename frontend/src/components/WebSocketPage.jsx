@@ -9,8 +9,7 @@ import { Badge } from "./ui/badge"
 import { AlertCircle, Loader, CheckCircle, Copy, Download } from "lucide-react"
 
 export default function WebSocketPage() {
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
+  const [query, setQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [streamingResponse, setStreamingResponse] = useState("")
   const [fullData, setFullData] = useState(null)
@@ -45,13 +44,8 @@ export default function WebSocketPage() {
       wsRef.current.close(4000, "Superseded by new request")
     }
     // Validation
-    if (!title.trim()) {
-      setError("Title is required")
-      setStatus("error")
-      return
-    }
-    if (!description.trim()) {
-      setError("Description is required")
+    if (!query.trim()) {
+      setError("Query is required")
       setStatus("error")
       return
     }
@@ -93,8 +87,8 @@ export default function WebSocketPage() {
         // Send the stream payload to start streaming
         wsRef.current.send(
           JSON.stringify({
-            title: title.trim(),
-            description: description.trim(),
+            title: query.trim(),
+            description: query.trim(),
           })
         )
       }
@@ -187,8 +181,7 @@ export default function WebSocketPage() {
   }
 
   const handleReset = () => {
-    setTitle("")
-    setDescription("")
+    setQuery("")
     setStreamingResponse("")
     setFullData(null)
     setStatus("idle")
@@ -216,22 +209,12 @@ export default function WebSocketPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <Input
-                  placeholder="Name your request"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-semibold text-black mb-2">Your Query</label>
                 <Textarea
-                  placeholder="Share context, goals, or constraints"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full min-h-32"
+                  placeholder="Describe what you need... Be specific with your requirements, goals, and any constraints."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full min-h-40 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 hover:border-blue-300 focus:border-blue-500 focus:outline-none focus:ring-0 transition-all duration-200 resize-none shadow-sm text-base"
                 />
               </div>
 
@@ -375,8 +358,18 @@ export default function WebSocketPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="text-gray-500 italic flex items-center justify-center h-full">
-                      {status === "idle" ? "Waiting for your prompt..." : "Summoning the stream..."}
+                    <div className="flex items-center justify-center h-full">
+                      {status === "idle" ? (
+                        <div className="text-gray-500 italic">Waiting for your prompt...</div>
+                      ) : status === "connecting" || status === "streaming" ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: "0ms" }}></div>
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: "150ms" }}></div>
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: "300ms" }}></div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
